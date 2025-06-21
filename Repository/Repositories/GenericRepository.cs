@@ -1,4 +1,6 @@
 ﻿
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using Repository.Repositories;
 using System;
@@ -75,6 +77,18 @@ namespace Repositories.Repository
         public virtual int Count()
         {
             return _context.Set<T>().Count();
+        }
+        public IQueryable<TResult> ProjectTo<TResult>(
+    IConfigurationProvider configuration)
+        {
+            return _context.Set<T>().ProjectTo<TResult>(configuration);
+        }
+
+        public IQueryable<TResult> ProjectTo<TResult>(
+            Expression<Func<T, bool>> predicate,
+            IConfigurationProvider configuration)
+        {
+            return _context.Set<T>().Where(predicate).ProjectTo<TResult>(configuration);
         }
         public virtual IQueryable<T> Include<TProperty>(Expression<Func<T, TProperty>> navigationPropertyPath)
         {

@@ -3,6 +3,11 @@ using Data.Entities;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Repositories.Repository;
+using Repositories.UnitOfWork;
+using Repository.Repositories;
+using Service.Interfaces;
+using Service.Services;
 using Web.Components;
 using Web.Components.Account;
 
@@ -17,12 +22,25 @@ namespace Web
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
-
+            builder.Services.AddAutoMapper(typeof(AutoMapperProfile).Assembly);
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            builder.Services.AddScoped<IAddressService, AddressService>();
+            builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+            builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+            builder.Services.AddScoped<IPostService, PostService>();
+            builder.Services.AddScoped<IResultService, ResultService>();
+            builder.Services.AddScoped<IReviewService, ReviewService>();
+            builder.Services.AddScoped<ISampleService, SampleService>();
+            builder.Services.AddScoped<IServiceService, ServiceService>();
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IPostService, PostService>();
+            
             builder.Services.AddCascadingAuthenticationState();
             builder.Services.AddScoped<IdentityUserAccessor>();
             builder.Services.AddScoped<IdentityRedirectManager>();
             builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-
+            
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -37,7 +55,16 @@ namespace Web
             builder.Services.AddQuickGridEntityFrameworkAdapter();
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            builder.Services.AddIdentityCore<User>(options => options.SignIn.RequireConfirmedAccount = true)
+            
+            builder.Services.AddIdentityCore<User>(opt =>
+            {
+                opt.Password.RequireDigit = false;
+                opt.Password.RequireLowercase = false;
+                opt.Password.RequireUppercase = false;
+                opt.Password.RequireNonAlphanumeric = false;
+                opt.Password.RequiredLength = 3;
+                opt.SignIn.RequireConfirmedAccount = true;
+            }).AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();

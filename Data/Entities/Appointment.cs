@@ -8,5 +8,23 @@ namespace Data.Entities
 {
     public class Appointment : AuditableEntity
     {
+        public DateTime ScheduledAt { get; set; }
+        public string Description { get; set; }
+        public AppointmentStatus Status { get; set; }
+        public int AddressId { get; set; }
+        public virtual Address Address { get; set; }
+        public string UserId { get; set; }
+        public virtual User User { get; set; }
+        public int ServiceId { get; set; }
+        public virtual Service Service { get; set; }
+        //public int SampleId { get; set; }
+        //public virtual Sample Sample { get; set; }
+    }
+    public enum AppointmentStatus
+    {
+        Scheduled,
+        Completed,
+        Cancelled,
+        NoShow
     }
 }

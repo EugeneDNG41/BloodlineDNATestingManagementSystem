@@ -16,11 +16,13 @@ namespace Data
         {
         }
         public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<Address> Addresses { get; set; }
         public DbSet<Result> Results { get; set; }
         public DbSet<Sample> Samples { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
+        public DbSet<Service> Services { get; set; }
         private string GetConnectionString()
         {
             IConfiguration configuration = new ConfigurationBuilder()
@@ -36,6 +38,16 @@ namespace Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Sample>()
+                .HasOne(a => a.Collector)
+                .WithMany(u => u.SamplesCollected)
+                .HasForeignKey(a => a.CollectorId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Sample>()
+                .HasOne(a => a.Donor)
+                .WithMany(u => u.SamplesDonated)
+                .HasForeignKey(a => a.DonorId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

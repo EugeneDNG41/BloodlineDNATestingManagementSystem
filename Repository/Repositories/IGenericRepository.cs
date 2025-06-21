@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AutoMapper;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -19,6 +20,11 @@ namespace Repository.Repositories
         T? GetById(string code);
         T? GetById(Guid code);
         int Count();
+        IQueryable<TResult> ProjectTo<TResult>(IConfigurationProvider configuration);
+        IQueryable<TResult> ProjectTo<TResult>(
+            Expression<Func<T, bool>> predicate,
+            IConfigurationProvider configuration
+        );
         IQueryable<T> Include<TProperty>(Expression<Func<T, TProperty>> navigationPropertyPath);
         IQueryable<T> AsQueryable();
         IQueryable<T> Where(Expression<Func<T, bool>> predicate);

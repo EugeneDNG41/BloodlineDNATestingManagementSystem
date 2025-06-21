@@ -3,15 +3,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using System.ComponentModel.DataAnnotations;
 using Repositories.Repository;
+using Data;
 
 namespace Repositories.UnitOfWork
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly DbContext _dbContext;
+        private readonly AppDbContext _dbContext;
 
         private readonly Dictionary<Type, object> repositories = new Dictionary<Type, object>();
-        public UnitOfWork(DbContext dbContext)
+        public UnitOfWork(AppDbContext dbContext)
         {
             _dbContext = dbContext;
         }
