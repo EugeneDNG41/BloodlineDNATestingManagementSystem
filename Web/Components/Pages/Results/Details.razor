@@ -1,0 +1,269 @@
+@page "/results/{id:int}"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims;
+@using Web.Components.Account
+@inject IdentityUserAccessor UserAccessor
+@inject Data.AppDbContext DbContext
+@attribute [Authorize(Roles = "User")]
+
+<PageTitle>Test Result Details</PageTitle>
+
+@if (result != null)
+{
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/results">Results</a></li>
+                <li class="breadcrumb-item active">@result.Summary</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">@result.Summary</h3>
+                        <span class="badge @GetAnalysisTypeBadgeClass(result.Type) fs-6">
+                            @FormatAnalysisType(result.Type)
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6>Test Information</h6>
+                                <p class="mb-1"><strong>Service:</strong> @result.Service.ServiceName</p>
+                                <p class="mb-1"><strong>Analysis Type:</strong> @FormatAnalysisType(result.Type)</p>
+                                <p class="mb-0"><strong>Report Date:</strong> @result.CreatedAt.ToString("MMMM dd, yyyy")</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Sample Information</h6>
+                                <p class="mb-1"><strong>Samples Analyzed:</strong> @result.Samples.Count</p>
+                                <p class="mb-0"><strong>Collection Method:</strong> 
+                                    @(result.Samples.FirstOrDefault()?.CollectionMethod.ToString() ?? "N/A")
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Test Results</h6>
+                            <div class="bg-light p-4 rounded">
+                                @if (result.Type == AnalysisType.Paternity)
+                                {
+                                    <div class="text-center mb-3">
+                                        <div class="h2 text-success">99.9%</div>
+                                        <p class="mb-0">Probability of Paternity</p>
+                                    </div>
+                                    <div class="alert alert-success">
+                                        <strong>Conclusion:</strong> The alleged father is not excluded as the biological father of the tested child.
+                                    </div>
+                                }
+                                else if (result.Type == AnalysisType.EthnicityEstimate)
+                                {
+                                    <h6>Ethnicity Breakdown</h6>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>European</span>
+                                            <span>45.2%</span>
+                                        </div>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-primary" style="width: 45.2%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>East Asian</span>
+                                            <span>32.1%</span>
+                                        </div>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-success" style="width: 32.1%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Sub-Saharan African</span>
+                                            <span>15.3%</span>
+                                        </div>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-warning" style="width: 15.3%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Native American</span>
+                                            <span>7.4%</span>
+                                        </div>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-info" style="width: 7.4%"></div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">Detailed results and analysis will be displayed here based on the specific test type.</p>
+                                }
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(result.Notes))
+                        {
+                            <div class="mb-4">
+                                <h6>Additional Notes</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0">@result.Notes</p>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="mb-4">
+                            <h6>Sample Details</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Sample ID</th>
+                                            <th>Type</th>
+                                            <th>Collection Date</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var sample in result.Samples)
+                                        {
+                                            <tr>
+                                                <td>@sample.Id</td>
+                                                <td>@sample.Type</td>
+                                                <td>@sample.CollectionDate.ToString("MMM dd, yyyy")</td>
+                                                <td>
+                                                    <span class="badge @GetSampleStatusBadgeClass(sample.Status)">
+                                                        @sample.Status
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-download me-2"></i>Download PDF Report
+                            </button>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-share me-2"></i>Share Results
+                            </button>
+                            <button class="btn btn-outline-secondary">
+                                <i class="fas fa-print me-2"></i>Print Report
+                            </button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="d-grid">
+                            <a href="/results" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Results
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-body">
+                        <h6><i class="fas fa-question-circle text-info me-2"></i>Understanding Your Results</h6>
+                        <p class="small text-muted mb-2">Need help interpreting your test results?</p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-book me-1"></i>View Guide
+                            </button>
+                            <button class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-phone me-1"></i>Speak to Counselor
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-body">
+                        <h6><i class="fas fa-shield-alt text-success me-2"></i>Privacy & Security</h6>
+                        <p class="small text-muted">Your genetic information is protected with bank-level security and is never shared without your explicit consent.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private User user = default!;
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private Result? result;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        await LoadResult();
+    }
+
+    private async Task LoadResult()
+    {
+        
+        result = await DbContext.Results
+            .Include(r => r.Service)
+            .Include(r => r.Samples)
+            .FirstOrDefaultAsync(r => r.Id == Id && r.UserId == user.Id);
+    }
+
+    private string FormatAnalysisType(AnalysisType type)
+    {
+        return type switch
+        {
+            AnalysisType.YChromosome => "Y-Chromosome",
+            AnalysisType.MitochondrialDNA => "Mitochondrial DNA",
+            AnalysisType.TwinZygosity => "Twin Zygosity",
+            AnalysisType.HaplogroupDetermination => "Haplogroup Determination",
+            AnalysisType.CourtAdmissiblePaternity => "Court Admissible Paternity",
+            AnalysisType.UnknownSampleIdentification => "Unknown Sample ID",
+            _ => type.ToString()
+        };
+    }
+
+    private string GetAnalysisTypeBadgeClass(AnalysisType type)
+    {
+        return type switch
+        {
+            AnalysisType.Paternity or AnalysisType.Maternity or AnalysisType.Sibling => "bg-primary",
+            AnalysisType.EthnicityEstimate or AnalysisType.AncestryComposition => "bg-success",
+            AnalysisType.CarrierStatus or AnalysisType.GeneticHealthRisk => "bg-warning",
+            AnalysisType.ImmigrationDNA or AnalysisType.CourtAdmissiblePaternity => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetSampleStatusBadgeClass(SampleStatus status)
+    {
+        return status switch
+        {
+            SampleStatus.Collected => "bg-info",
+            SampleStatus.Received => "bg-primary",
+            SampleStatus.Processing => "bg-warning",
+            SampleStatus.Completed => "bg-success",
+            SampleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

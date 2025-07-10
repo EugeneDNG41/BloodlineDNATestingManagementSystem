@@ -10,9 +10,8 @@ namespace Data.Entities
     public class User : IdentityUser
     {
         public string FullName { get; set; }
-        public DateTime DateOfBirth { get; set; }
-        
-        public string ProfilePictureUrl { get; set; }
+        public DateTime DateOfBirth { get; set; }        
+        public string? ProfilePictureUrl { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public virtual ICollection<Address> Addresses { get; set; } = new List<Address>();
@@ -22,5 +21,6 @@ namespace Data.Entities
         public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
         public virtual ICollection<Sample> SamplesCollected { get; set; } = new List<Sample>();
         public virtual ICollection<Sample> SamplesDonated { get; set; } = new List<Sample>();
+        public virtual ICollection<Result> Results { get; set; } = new List<Result>();
     }
 }

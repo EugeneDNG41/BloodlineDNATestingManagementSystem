@@ -1,0 +1,189 @@
+@page "/reviews/create"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@using Data.Enum
+@using Web.Components.Account
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations;
+@inject IdentityUserAccessor UserAccessor
+@inject Data.AppDbContext DbContext
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "User")]
+
+<PageTitle>Leave a Review</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-star text-warning me-2"></i>
+                        Leave a Review
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="reviewModel" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-4">
+                            <label for="serviceSelect" class="form-label">Select Service <span class="text-danger">*</span></label>
+                            <InputSelect id="serviceSelect" class="form-select" @bind-Value="reviewModel.ServiceId">
+                                <option value="">Choose a service to review...</option>
+                                @foreach (var service in availableServices)
+                                {
+                                    <option value="@service.Id">@service.ServiceName</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => reviewModel.ServiceId)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Rating <span class="text-danger">*</span></label>
+                            <div class="rating-container">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    var starIndex = i;
+                                    <button type="button" class="btn btn-link p-0 me-1 star-button @(starIndex <= reviewModel.Rating ? "text-warning" : "text-muted")"
+                                            @onclick="() => SetRating(starIndex)">
+                                        <i class="fas fa-star fa-2x"></i>
+                                    </button>
+                                }
+                            </div>
+                            <div class="form-text">
+                                @if (reviewModel.Rating > 0)
+                                {
+                                    <span>You rated this service @reviewModel.Rating out of 5 stars</span>
+                                }
+                                else
+                                {
+                                    <span>Click on the stars to rate this service</span>
+                                }
+                            </div>
+                            <ValidationMessage For="@(() => reviewModel.Rating)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="comment" class="form-label">Your Review <span class="text-danger">*</span></label>
+                            <InputTextArea id="comment" class="form-control" @bind-Value="reviewModel.Comment" 
+                                         placeholder="Share your experience with this service..." rows="5" />
+                            <div class="form-text">Help others by sharing your honest experience with this service.</div>
+                            <ValidationMessage For="@(() => reviewModel.Comment)" class="text-danger" />
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Submit Review
+                            </button>
+                            <a href="/services" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .star-button {
+        border: none !important;
+        background: none !important;
+        box-shadow: none !important;
+    }
+    
+    .star-button:hover {
+        transform: scale(1.1);
+        transition: transform 0.2s;
+    }
+</style>
+
+@code {
+    private User user = default!;
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+    [Parameter, SupplyParameterFromQuery] public int? ServiceId { get; set; }
+    
+    private ReviewModel reviewModel = new();
+    private List<Service> availableServices = new();
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        await LoadServices();
+        
+        if (ServiceId.HasValue)
+        {
+            reviewModel.ServiceId = ServiceId.Value;
+        }
+    }
+
+    private async Task LoadServices()
+    {
+        // Load services that the user has completed appointments for
+        availableServices = await DbContext.Services
+            .Where(s => DbContext.Appointments
+                .Any(a => a.ServiceId == s.Id && 
+                         a.UserId == user.Id && 
+                         a.Status == AppointmentStatus.Completed))
+            .ToListAsync();
+    }
+
+    private void SetRating(int rating)
+    {
+        reviewModel.Rating = rating;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        
+        try
+        {
+            var review = new Review
+            {
+                Rating = reviewModel.Rating,
+                Comment = reviewModel.Comment,
+                UserId = user.Id,
+                ServiceId = reviewModel.ServiceId
+            };
+
+            DbContext.Reviews.Add(review);
+            await DbContext.SaveChangesAsync();
+
+            await JSRuntime.InvokeVoidAsync("alert", "Thank you for your review!");
+            Navigation.NavigateTo("/services");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error submitting review: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public class ReviewModel
+    {
+        [Required(ErrorMessage = "Please select a service")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a service")]
+        public int ServiceId { get; set; }
+
+        [Required(ErrorMessage = "Please provide a rating")]
+        [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5 stars")]
+        public int Rating { get; set; }
+
+        [Required(ErrorMessage = "Please write a review")]
+        [StringLength(1000, MinimumLength = 10, ErrorMessage = "Review must be between 10 and 1000 characters")]
+        public string Comment { get; set; } = "";
+    }
+}

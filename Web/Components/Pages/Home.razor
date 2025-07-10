@@ -1,7 +1,309 @@
-﻿@page "/"
+@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@inject Data.AppDbContext DbContext
 
-<PageTitle>Home</PageTitle>
+<PageTitle>DNA Bloodline Testing - Discover Your Heritage</PageTitle>
 
-<h1>Hello, world!</h1>
+<!-- Hero Section -->
+<section class="hero-section bg-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center min-vh-50">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Discover Your DNA Story</h1>
+                <p class="lead mb-4">
+                    Unlock the secrets of your ancestry with our comprehensive DNA testing services. 
+                    From paternity testing to detailed ethnicity analysis, we provide accurate, 
+                    confidential results you can trust.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="/services" class="btn btn-light btn-lg">
+                        <i class="fas fa-vial me-2"></i>Browse Services
+                    </a>
+                    <a href="/appointments/book" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-calendar-plus me-2"></i>Book Appointment
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="hero-image">
+                    <i class="fas fa-dna fa-10x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-Welcome to your new app.
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h2 class="display-5 mb-3">Why Choose Our DNA Testing?</h2>
+                <p class="lead text-muted">Industry-leading accuracy, privacy, and comprehensive analysis</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="feature-icon bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-shield-alt fa-2x"></i>
+                        </div>
+                        <h4>99.9% Accuracy</h4>
+                        <p class="text-muted">State-of-the-art laboratory technology ensures the highest accuracy in all our DNA analyses.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="feature-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-lock fa-2x"></i>
+                        </div>
+                        <h4>Complete Privacy</h4>
+                        <p class="text-muted">Your genetic information is protected with bank-level security and never shared without consent.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="feature-icon bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                        <h4>Fast Results</h4>
+                        <p class="text-muted">Get your comprehensive DNA analysis results in as little as 1-2 weeks.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Services Preview -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h2 class="display-5 mb-3">Our DNA Testing Services</h2>
+                <p class="lead text-muted">Comprehensive genetic analysis for every need</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            @if (featuredServices?.Any() == true)
+            {
+                @foreach (var service in featuredServices.Take(3))
+                {
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-4">
+                                <h5 class="card-title text-primary">@service.ServiceName</h5>
+                                <p class="card-text text-muted">@service.Description</p>
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <div>
+                                        <span class="h5 text-success">$@service.Price.ToString("F2")</span>
+                                        <br>
+                                        <small class="text-muted">@service.Duration</small>
+                                    </div>
+                                    <a href="/services/@service.Id" class="btn btn-outline-primary">Learn More</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="/services" class="btn btn-primary btn-lg">
+                View All Services <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h2 class="display-5 mb-3">How It Works</h2>
+                <p class="lead text-muted">Simple, secure, and scientifically accurate</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-3 text-center">
+                <div class="step-number bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="h4 mb-0">1</span>
+                </div>
+                <h5>Choose Your Test</h5>
+                <p class="text-muted">Select from our comprehensive range of DNA testing services</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="step-number bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="h4 mb-0">2</span>
+                </div>
+                <h5>Book Appointment</h5>
+                <p class="text-muted">Schedule a convenient time for sample collection at your location</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="step-number bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="h4 mb-0">3</span>
+                </div>
+                <h5>Sample Collection</h5>
+                <p class="text-muted">Our certified technician collects your sample safely and professionally</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="step-number bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="h4 mb-0">4</span>
+                </div>
+                <h5>Get Results</h5>
+                <p class="text-muted">Receive your comprehensive results through our secure online portal</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row text-center g-4">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="h2 fw-bold">@totalTests.ToString("N0")</div>
+                    <p class="mb-0">Tests Completed</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="h2 fw-bold">99.9%</div>
+                    <p class="mb-0">Accuracy Rate</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="h2 fw-bold">@happyCustomers.ToString("N0")</div>
+                    <p class="mb-0">Happy Customers</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="h2 fw-bold">@yearsExperience</div>
+                    <p class="mb-0">Years Experience</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recent Reviews -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h2 class="display-5 mb-3">What Our Customers Say</h2>
+                <p class="lead text-muted">Real experiences from real customers</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            @if (recentReviews?.Any() == true)
+            {
+                @foreach (var review in recentReviews.Take(3))
+                {
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="text-warning me-2">
+                                        @for (int i = 0; i < review.Rating; i++)
+                                        {
+                                            <i class="fas fa-star"></i>
+                                        }
+                                    </div>
+                                    <small class="text-muted">@review.CreatedAt.ToString("MMM yyyy")</small>
+                                </div>
+                                <p class="card-text">"@review.Comment"</p>
+                                <div class="mt-auto">
+                                    <small class="text-muted">- @review.Service.ServiceName Customer</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 bg-light">
+    <div class="container text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h2 class="display-5 mb-3">Ready to Discover Your DNA Story?</h2>
+                <p class="lead text-muted mb-4">
+                    Join thousands of satisfied customers who have unlocked their genetic heritage with our comprehensive DNA testing services.
+                </p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="/services" class="btn btn-primary btn-lg">
+                        <i class="fas fa-vial me-2"></i>Browse Services
+                    </a>
+                    <a href="/appointments/book" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-calendar-plus me-2"></i>Book Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .min-vh-50 {
+        min-height: 50vh;
+    }
+    
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .fa-10x {
+        font-size: 10rem;
+    }
+</style>
+
+@code {
+    private List<Service> featuredServices = new();
+    private List<Review> recentReviews = new();
+    private int totalTests = 15420;
+    private int happyCustomers = 12350;
+    private int yearsExperience = 8;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFeaturedServices();
+        await LoadRecentReviews();
+    }
+
+    private async Task LoadFeaturedServices()
+    {
+        featuredServices = await DbContext.Services
+            .OrderBy(s => s.Price)
+            .Take(3)
+            .ToListAsync();
+    }
+
+    private async Task LoadRecentReviews()
+    {
+        recentReviews = await DbContext.Reviews
+            .Include(r => r.Service)
+            .Where(r => r.Rating >= 4)
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(3)
+            .ToListAsync();
+    }
+}

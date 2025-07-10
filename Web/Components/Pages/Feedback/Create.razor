@@ -1,0 +1,136 @@
+@page "/feedback/create"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@using Data.Enum
+@using System.ComponentModel.DataAnnotations;
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims;
+@using Web.Components.Account
+@inject IdentityUserAccessor UserAccessor
+@inject Data.AppDbContext DbContext
+@attribute [Authorize(Roles = "User")]
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Submit Feedback</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-comment-dots text-primary me-2"></i>
+                        Submit Feedback
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="feedbackModel" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-4">
+                            <label for="feedbackType" class="form-label">Feedback Type <span class="text-danger">*</span></label>
+                            <InputSelect id="feedbackType" class="form-select" @bind-Value="feedbackModel.Type">
+                                <option value="">Select feedback type...</option>
+                                <option value="@FeedbackType.Service">Service Related</option>
+                                <option value="@FeedbackType.Appointment">Appointment Related</option>
+                                <option value="@FeedbackType.General">General Feedback</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => feedbackModel.Type)" class="text-danger" />
+                            <div class="form-text">
+                                Choose the category that best describes your feedback
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="message" class="form-label">Your Message <span class="text-danger">*</span></label>
+                            <InputTextArea id="message" class="form-control" @bind-Value="feedbackModel.Message" 
+                                         placeholder="Please describe your feedback, concern, or suggestion in detail..." rows="6" />
+                            <ValidationMessage For="@(() => feedbackModel.Message)" class="text-danger" />
+                            <div class="form-text">
+                                Please provide as much detail as possible to help us address your feedback effectively.
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>What happens next?
+                            </h6>
+                            <ul class="mb-0">
+                                <li>Your feedback will be reviewed by our team within 24-48 hours</li>
+                                <li>You'll receive updates on the status of your feedback</li>
+                                <li>For urgent matters, please call our support line directly</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Submit Feedback
+                            </button>
+                            <a href="/feedback" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private User user = default!;
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+    private FeedbackModel feedbackModel = new();
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    }
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        
+        try
+        {
+            var feedback = new Feedback
+            {
+                Message = feedbackModel.Message,
+                Type = feedbackModel.Type,
+                Status = FeedbackStatus.Pending,
+                    UserId = user.Id
+                };
+
+            DbContext.Feedbacks.Add(feedback);
+            await DbContext.SaveChangesAsync();
+
+            await JSRuntime.InvokeVoidAsync("alert", "Thank you for your feedback! We'll review it and get back to you soon.");
+            Navigation.NavigateTo("/feedback");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error submitting feedback: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public class FeedbackModel
+    {
+        [Required(ErrorMessage = "Please select a feedback type")]
+        public FeedbackType Type { get; set; }
+
+        [Required(ErrorMessage = "Please provide your feedback message")]
+        [StringLength(2000, MinimumLength = 10, ErrorMessage = "Message must be between 10 and 2000 characters")]
+        public string Message { get; set; } = "";
+    }
+}

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Data.Enum;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,18 +16,5 @@ namespace Data.Entities
         { get; set; } // Foreign key to User
         public virtual User User { get; set; } // Navigation property to User
 
-    }
-    public enum FeedbackType
-    {
-        Service,
-        Appointment,
-        General
-    }
-    public enum FeedbackStatus
-    {
-        Pending,
-        Reviewed,
-        Resolved,
-        Closed
     }
 }

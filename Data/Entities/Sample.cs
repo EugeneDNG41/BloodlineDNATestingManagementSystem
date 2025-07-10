@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Data.Enum;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,28 +20,5 @@ namespace Data.Entities
         public string DonorId { get; set; }
         public virtual User Donor { get; set; }
     }
-    public enum SampleCollectionMethod
-    {
-        Appointment,
-        HomeVisit,
-        WalkIn,
-        MailIn
-    }
-    public enum SampleStatus
-    {
-        Collected, 
-        Received, 
-        Processing, 
-        Completed, 
-        Rejected
-
-    }
-    public enum SampleType
-    {
-        Blood,
-        Urine,
-        Tissue,
-        Saliva,
-        Other
-    }
+    
 }

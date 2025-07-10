@@ -1,0 +1,283 @@
+@page "/admin/users"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Data.Entities
+@using Microsoft.AspNetCore.Authorization
+@inject Data.AppDbContext DbContext
+@inject UserManager<User> UserManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>User Management</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">User Management</h1>
+        <a href="/admin/users/create" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New User
+        </a>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="Search users..." @bind="searchTerm" @oninput="FilterUsers">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="SelectedRole">
+                        <option value="">All Roles</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Customer">Customer</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="SelectedStatus">
+                        <option value="">All Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" @onclick="ResetFilters">
+                        <i class="fas fa-undo me-1"></i>Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Users (@filteredUsers.Count)</h5>
+        </div>
+        <div class="card-body p-0">
+            @if (filteredUsers?.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Joined</th>
+                                <th>Appointments</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in filteredUsers)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                                            {
+                                                <img src="@user.ProfilePictureUrl" alt="Profile" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                                    @user.FullName.Substring(0, 1).ToUpper()
+                                                </div>
+                                            }
+                                            <div>
+                                                <div class="fw-semibold">@user.FullName</div>
+                                                <small class="text-muted">ID: @user.Id</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @user.Email
+                                        @if (user.EmailConfirmed)
+                                        {
+                                            <i class="fas fa-check-circle text-success ms-1" title="Email Verified"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-exclamation-circle text-warning ms-1" title="Email Not Verified"></i>
+                                        }
+                                    </td>
+                                    <td>
+                                        @foreach (var role in userRoles.GetValueOrDefault(user.Id, new List<string>()))
+                                        {
+                                            <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                        }
+                                    </td>
+                                    <td>@user.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                    <td>
+                                        <span class="badge bg-info">@user.Appointments.Count</span>
+                                    </td>
+                                    <td>
+                                        @if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTime.UtcNow)
+                                        {
+                                            <span class="badge bg-danger">Locked</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="/admin/users/@user.Id" class="btn btn-outline-primary" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="/admin/users/@user.Id/edit" class="btn btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            @if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTime.UtcNow)
+                                            {
+                                                <button class="btn btn-outline-success" @onclick="() => UnlockUser(user.Id)" title="Unlock">
+                                                    <i class="fas fa-unlock"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-outline-warning" @onclick="() => LockUser(user.Id)" title="Lock">
+                                                    <i class="fas fa-lock"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No users found</h4>
+                    <p class="text-muted">Try adjusting your search criteria</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<User> users = new();
+    private List<User> filteredUsers = new();
+    private Dictionary<string, List<string>> userRoles = new();
+    
+    private string searchTerm = "";
+    private string selectedRole = "";
+    public string SelectedRole
+    {
+        get => selectedRole;
+        set
+        {
+            if (selectedRole != value)
+            {
+                selectedRole = value;
+                FilterUsers();
+            }
+        }
+    }
+    private string selectedStatus = "";
+    public string SelectedStatus
+    {
+        get => selectedStatus;
+        set
+        {
+            if (selectedStatus != value)
+            {
+                selectedStatus = value;
+                FilterUsers();
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+        await LoadUserRoles();
+        filteredUsers = users.ToList();
+    }
+
+    private async Task LoadUsers()
+    {
+        users = await DbContext.Users
+            .Include(u => u.Appointments)
+            .OrderByDescending(u => u.CreatedAt)
+            .ToListAsync();
+    }
+
+    private async Task LoadUserRoles()
+    {
+        userRoles = new Dictionary<string, List<string>>();
+        
+        foreach (var user in users)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            userRoles[user.Id] = roles.ToList();
+        }
+    }
+
+    private void FilterUsers()
+    {
+        filteredUsers = users.Where(u =>
+            (string.IsNullOrEmpty(searchTerm) || 
+             u.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(selectedRole) || 
+             userRoles.GetValueOrDefault(u.Id, new List<string>()).Contains(selectedRole)) &&
+            (string.IsNullOrEmpty(selectedStatus) || 
+             (selectedStatus == "Active" && (!u.LockoutEnd.HasValue || u.LockoutEnd <= DateTime.UtcNow)) ||
+             (selectedStatus == "Inactive" && u.LockoutEnd.HasValue && u.LockoutEnd > DateTime.UtcNow))
+        ).ToList();
+    }
+
+    private void ResetFilters()
+    {
+        searchTerm = "";
+        selectedRole = "";
+        selectedStatus = "";
+        filteredUsers = users.ToList();
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "Admin" => "bg-danger",
+            "Staff" => "bg-warning",
+            "Customer" => "bg-primary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task LockUser(string userId)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to lock this user?");
+        if (confirmed)
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user != null)
+            {
+                await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
+                await LoadUsers();
+                FilterUsers();
+            }
+        }
+    }
+
+    private async Task UnlockUser(string userId)
+    {
+        var user = await UserManager.FindByIdAsync(userId);
+        if (user != null)
+        {
+            await UserManager.SetLockoutEndDateAsync(user, null);
+            await LoadUsers();
+            FilterUsers();
+        }
+    }
+}

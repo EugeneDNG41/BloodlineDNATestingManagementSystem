@@ -1,0 +1,197 @@
+﻿@page "/services/{id:int}"
+@using Data.Entities
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Navigation
+
+<PageTitle>@(service?.ServiceName ?? "Service Details")</PageTitle>
+
+@if (service != null)
+{
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/services">Services</a></li>
+                <li class="breadcrumb-item active">@service.ServiceName</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-4">
+                            <h1 class="display-5 text-primary mb-0">@service.ServiceName</h1>
+                            <div class="text-end">
+                                <div class="h2 text-success mb-0">$@service.Price.ToString("F2")</div>
+                                <small class="text-muted">per test</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-clock text-primary me-2"></i>
+                                    <strong>Duration:</strong>
+                                    <span class="ms-2">@service.Duration</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-star text-warning me-2"></i>
+                                    <strong>Rating:</strong>
+                                    <span class="ms-2">4.8/5 (124 reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h3>Description</h3>
+                            <p class="lead">@service.Description</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <h3>What's Included</h3>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>DNA sample collection kit</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Laboratory analysis</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Detailed results report</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Online results portal access</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Customer support</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-4">
+                            <h3>How It Works</h3>
+                            <div class="row">
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                        <span class="h4 mb-0">1</span>
+                                    </div>
+                                    <h5>Order Kit</h5>
+                                    <p class="text-muted">Order your DNA testing kit online</p>
+                                </div>
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                        <span class="h4 mb-0">2</span>
+                                    </div>
+                                    <h5>Collect Sample</h5>
+                                    <p class="text-muted">Follow simple instructions to collect your sample</p>
+                                </div>
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                        <span class="h4 mb-0">3</span>
+                                    </div>
+                                    <h5>Get Results</h5>
+                                    <p class="text-muted">Receive your detailed results online</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reviews Section -->
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h3 class="mb-0">Customer Reviews</h3>
+                    </div>
+                    <div class="card-body">
+                        @for (int i = 0; i < 3; i++)
+                        {
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong>Customer @(i + 1)</strong>
+                                        <div class="text-warning">
+                                            @for (int j = 0; j < 5; j++)
+                                            {
+                                                <i class="fas fa-star"></i>
+                                            }
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">2 weeks ago</small>
+                                </div>
+                                <p class="mb-0">Excellent service and very detailed results. The process was simple and the customer support was outstanding.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm sticky-top" style="top: 20px;">
+                    <div class="card-body">
+                        <h4 class="card-title">Book This Service</h4>
+                        <div class="mb-3">
+                            <div class="h3 text-success">$@service.Price.ToString("F2")</div>
+                            <small class="text-muted">Processing time: @service.Duration</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a href="/services/@service.Id/book" class="btn btn-primary btn-lg">
+                                <i class="fas fa-calendar-plus me-2"></i>
+                                Book Appointment
+                            </a>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <h6>Need Help?</h6>
+                            <p class="small text-muted mb-2">Have questions about this service?</p>
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-phone me-1"></i>
+                                Call Us
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm ms-2">
+                                <i class="fas fa-envelope me-1"></i>
+                                Email
+                            </button>
+                        </div>
+
+                        <div class="text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                100% Secure & Confidential
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container py-5">
+        <div class="text-center">
+            <h2>Service Not Found</h2>
+            <p class="text-muted">The requested service could not be found.</p>
+            <a href="/services" class="btn btn-primary">Back to Services</a>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Service? service;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadService();
+    }
+
+    private async Task LoadService()
+    {
+        // Replace with actual service call
+        var services = new List<Service>
+        {
+            new Service { Id = 1, ServiceName = "Basic Ancestry DNA", Description = "Discover your ethnic background and find DNA matches with our basic ancestry test. Get comprehensive insights into your family history and genetic heritage with detailed reports and interactive family tree building tools.", Price = 99.99m, Duration = "2-3 weeks" },
+            new Service { Id = 2, ServiceName = "Advanced Bloodline Analysis", Description = "Comprehensive bloodline analysis including detailed family tree construction and advanced genetic markers.", Price = 299.99m, Duration = "4-6 weeks" },
+            new Service { Id = 3, ServiceName = "Paternity Testing", Description = "Accurate paternity testing with 99.9% accuracy. Confidential and legally admissible results.", Price = 199.99m, Duration = "1-2 weeks" },
+            new Service { Id = 4, ServiceName = "Health + Ancestry", Description = "Complete package including ancestry information plus health predispositions and carrier status reports.", Price = 499.99m, Duration = "3-4 weeks" }
+        };
+
+        service = services.FirstOrDefault(s => s.Id == Id);
+    }
+}

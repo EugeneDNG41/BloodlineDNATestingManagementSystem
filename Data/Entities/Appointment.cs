@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Data.Enum;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,8 @@ namespace Data.Entities
     {
         public DateTime ScheduledAt { get; set; }
         public string Description { get; set; }
+        public string? CancellationReason { get; set; }
+        public string? CancelledByUserId { get; set; }
         public AppointmentStatus Status { get; set; }
         public int AddressId { get; set; }
         public virtual Address Address { get; set; }
@@ -17,14 +20,7 @@ namespace Data.Entities
         public virtual User User { get; set; }
         public int ServiceId { get; set; }
         public virtual Service Service { get; set; }
-        //public int SampleId { get; set; }
-        //public virtual Sample Sample { get; set; }
-    }
-    public enum AppointmentStatus
-    {
-        Scheduled,
-        Completed,
-        Cancelled,
-        NoShow
+        public int? SampleId { get; set; }
+        public virtual Sample Sample { get; set; }
     }
 }

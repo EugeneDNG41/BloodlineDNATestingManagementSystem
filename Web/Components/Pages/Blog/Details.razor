@@ -1,0 +1,202 @@
+@page "/blog/{id:int}"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@inject Data.AppDbContext DbContext
+
+<PageTitle>@(post?.Title ?? "Blog Article")</PageTitle>
+
+@if (post != null)
+{
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-lg-8">
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/blog">Blog</a></li>
+                        <li class="breadcrumb-item active">@post.Title</li>
+                    </ol>
+                </nav>
+
+                <article class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <header class="mb-4">
+                            <h1 class="display-6 mb-3">@post.Title</h1>
+                            <div class="d-flex align-items-center text-muted mb-3">
+                                <div class="me-4">
+                                    <i class="fas fa-user me-2"></i>
+                                    <strong>@post.Author.FullName</strong>
+                                </div>
+                                <div class="me-4">
+                                    <i class="fas fa-calendar me-2"></i>
+                                    @post.CreatedAt.ToString("MMMM dd, yyyy")
+                                </div>
+                                <div>
+                                    <i class="fas fa-clock me-2"></i>
+                                    @EstimateReadingTime(post.Content) min read
+                                </div>
+                            </div>
+                        </header>
+
+                        <div class="article-content">
+                            @((MarkupString)post.Content)
+                        </div>
+
+                        <footer class="mt-5 pt-4 border-top">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6>Share this article:</h6>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-outline-primary btn-sm">
+                                            <i class="fab fa-facebook-f"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm">
+                                            <i class="fab fa-twitter"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-link"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <a href="/blog" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Blog
+                                </a>
+                            </div>
+                        </footer>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">About the Author</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>@post.Author.FullName</h6>
+                        <p class="text-muted small">Genetic counselor and DNA testing expert with over 10 years of experience in the field.</p>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Related Articles</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (relatedPosts?.Any() == true)
+                        {
+                            @foreach (var relatedPost in relatedPosts)
+                            {
+                                <div class="mb-3 pb-3 @(relatedPost != relatedPosts.Last() ? "border-bottom" : "")">
+                                    <h6 class="mb-1">
+                                        <a href="/blog/@relatedPost.Id" class="text-decoration-none">@relatedPost.Title</a>
+                                    </h6>
+                                    <small class="text-muted">@relatedPost.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted small">No related articles found.</p>
+                        }
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5>Ready for DNA Testing?</h5>
+                        <p class="text-muted">Start your genetic discovery journey today with our professional DNA testing services.</p>
+                        <a href="/services" class="btn btn-primary">
+                            <i class="fas fa-vial me-2"></i>Browse Services
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container py-5">
+        <div class="text-center">
+            <h2>Article Not Found</h2>
+            <p class="text-muted">The requested article could not be found.</p>
+            <a href="/blog" class="btn btn-primary">Back to Blog</a>
+        </div>
+    </div>
+}
+
+<style>
+    .article-content {
+        line-height: 1.8;
+        font-size: 1.1rem;
+    }
+    
+    .article-content h2,
+    .article-content h3,
+    .article-content h4 {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        color: #495057;
+    }
+    
+    .article-content p {
+        margin-bottom: 1.5rem;
+    }
+    
+    .article-content ul,
+    .article-content ol {
+        margin-bottom: 1.5rem;
+        padding-left: 2rem;
+    }
+    
+    .article-content blockquote {
+        border-left: 4px solid #007bff;
+        padding-left: 1rem;
+        margin: 1.5rem 0;
+        font-style: italic;
+        color: #6c757d;
+    }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    
+    private Post? post;
+    private List<Post> relatedPosts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPost();
+        await LoadRelatedPosts();
+    }
+
+    private async Task LoadPost()
+    {
+        post = await DbContext.Posts
+            .Include(p => p.Author)
+            .FirstOrDefaultAsync(p => p.Id == Id && p.IsPublished);
+    }
+
+    private async Task LoadRelatedPosts()
+    {
+        if (post != null)
+        {
+            relatedPosts = await DbContext.Posts
+                .Include(p => p.Author)
+                .Where(p => p.Id != post.Id && p.IsPublished)
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(3)
+                .ToListAsync();
+        }
+    }
+
+    private int EstimateReadingTime(string content)
+    {
+        // Estimate reading time based on average reading speed of 200 words per minute
+        var wordCount = content.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        return Math.Max(1, wordCount / 200);
+    }
+}

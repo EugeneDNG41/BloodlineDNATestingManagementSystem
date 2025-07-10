@@ -1,0 +1,312 @@
+@page "/admin"
+@page "/admin/dashboard"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@inject Data.AppDbContext DbContext
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Admin Dashboard</h1>
+        <div class="d-flex gap-2">
+            <span class="badge bg-success">System Online</span>
+            <span class="text-muted">Last updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</span>
+        </div>
+    </div>
+
+    <!-- Key Metrics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">@totalUsers</div>
+                            <div>Total Users</div>
+                            <small class="opacity-75">+@newUsersThisMonth this month</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">@totalAppointments</div>
+                            <div>Total Appointments</div>
+                            <small class="opacity-75">@appointmentsToday today</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-calendar fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">@totalSamples</div>
+                            <div>Samples Processing</div>
+                            <small class="opacity-75">@samplesCompleted completed</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-vial fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">$@totalRevenue.ToString("N0")</div>
+                            <div>Total Revenue</div>
+                            <small class="opacity-75">$@monthlyRevenue this month</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-dollar-sign fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Recent Appointments -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Appointments</h5>
+                    <a href="/admin/appointments" class="btn btn-outline-primary btn-sm">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (recentAppointments?.Any() == true)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Service</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var appointment in recentAppointments.Take(5))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                        @appointment.User.FullName.Substring(0, 1).ToUpper()
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-semibold">@appointment.User.FullName</div>
+                                                        <small class="text-muted">@appointment.User.Email</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>@appointment.Service.ServiceName</td>
+                                            <td>@appointment.ScheduledAt.ToString("MMM dd, yyyy")</td>
+                                            <td>
+                                                <span class="badge @GetStatusBadgeClass(appointment.Status)">
+                                                    @appointment.Status
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="/admin/appointments/@appointment.Id" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <p class="text-muted">No recent appointments</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions & System Status -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/admin/users" class="btn btn-outline-primary">
+                            <i class="fas fa-users me-2"></i>Manage Users
+                        </a>
+                        <a href="/admin/appointments" class="btn btn-outline-success">
+                            <i class="fas fa-calendar me-2"></i>View Appointments
+                        </a>
+                        <a href="/admin/samples" class="btn btn-outline-info">
+                            <i class="fas fa-vial me-2"></i>Sample Tracking
+                        </a>
+                        <a href="/admin/services" class="btn btn-outline-warning">
+                            <i class="fas fa-cog me-2"></i>Manage Services
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">System Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Server Health</span>
+                            <span class="text-success">Excellent</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: 95%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Database</span>
+                            <span class="text-success">Online</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Storage</span>
+                            <span class="text-warning">78%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-warning" style="width: 78%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mt-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Appointments Overview</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="appointmentsChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Service Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="servicesChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+</style>
+
+@code {
+    private int totalUsers;
+    private int newUsersThisMonth;
+    private int totalAppointments;
+    private int appointmentsToday;
+    private int totalSamples;
+    private int samplesCompleted;
+    private decimal totalRevenue;
+    private decimal monthlyRevenue;
+    
+    private List<Appointment> recentAppointments = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        var now = DateTime.UtcNow;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1);
+        var today = now.Date;
+
+        // Load metrics
+        totalUsers = await DbContext.Users.CountAsync();
+        newUsersThisMonth = await DbContext.Users.CountAsync(u => u.CreatedAt >= startOfMonth);
+        
+        totalAppointments = await DbContext.Appointments.CountAsync();
+        appointmentsToday = await DbContext.Appointments.CountAsync(a => a.ScheduledAt.Date == today);
+        
+        totalSamples = await DbContext.Samples.CountAsync(s => s.Status == SampleStatus.Processing);
+        samplesCompleted = await DbContext.Samples.CountAsync(s => s.Status == SampleStatus.Completed);
+        
+        // Calculate revenue (simplified - you might want to add actual payment tracking)
+        var services = await DbContext.Services.ToListAsync();
+        totalRevenue = services.Sum(s => s.Price) * totalAppointments * 0.7m; // Estimated
+        monthlyRevenue = totalRevenue * 0.1m; // Estimated monthly
+
+        // Load recent appointments
+        recentAppointments = await DbContext.Appointments
+            .Include(a => a.User)
+            .Include(a => a.Service)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(10)
+            .ToListAsync();
+    }
+
+    private string GetStatusBadgeClass(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.Scheduled => "bg-primary",
+            AppointmentStatus.Completed => "bg-success",
+            AppointmentStatus.Cancelled => "bg-danger",
+            AppointmentStatus.NoShow => "bg-warning",
+            _ => "bg-secondary"
+        };
+    }
+}

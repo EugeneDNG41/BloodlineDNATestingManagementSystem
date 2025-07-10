@@ -29,7 +29,7 @@ namespace Data
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json")
                 .Build();
-            return configuration.GetConnectionString("DefaultConnection");
+            return configuration.GetConnectionString("MySQLConnection");
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

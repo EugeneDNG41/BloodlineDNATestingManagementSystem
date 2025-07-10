@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Repositories.Repository;
 using Repositories.UnitOfWork;
 using Repository.Repositories;
-using Service.Interfaces;
-using Service.Services;
+using Services.Interfaces;
+using Services.Services;
 using Web.Components;
 using Web.Components.Account;
 
@@ -34,7 +34,6 @@ namespace Web
             builder.Services.AddScoped<ISampleService, SampleService>();
             builder.Services.AddScoped<IServiceService, ServiceService>();
             builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IPostService, PostService>();
             
             builder.Services.AddCascadingAuthenticationState();
             builder.Services.AddScoped<IdentityUserAccessor>();
@@ -49,8 +48,12 @@ namespace Web
                 .AddIdentityCookies();
 
             builder.Services.AddDbContext<AppDbContext>(options =>
-                 options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"),
+                 options.UseMySql(builder.Configuration.GetConnectionString("MySQLConnection"),
                  new MySqlServerVersion(new Version(8, 0, 37))));
+            //builder.Services.AddDbContext<AppDbContext>(options =>
+            //{
+            //    options.UseSqlServer(builder.Configuration.GetConnectionString("MSSQLConnection"));
+            //});
 
             builder.Services.AddQuickGridEntityFrameworkAdapter();
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();

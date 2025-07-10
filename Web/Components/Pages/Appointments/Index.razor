@@ -1,0 +1,193 @@
+@page "/appointments"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims;
+@using Web.Components.Account
+@inject IdentityUserAccessor UserAccessor
+@inject Data.AppDbContext DbContext
+@attribute [Authorize(Roles = "User")]
+@inject IJSRuntime JSRuntime
+
+<PageTitle>My Appointments</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">My Appointments</h1>
+        <a href="/services" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Book New Appointment
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Search appointments..." @bind="searchTerm" @oninput="FilterAppointments">
+                <button class="btn btn-outline-secondary" type="button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select class="form-select" @bind="SelectedStatus">
+                <option value="">All Status</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+                <option value="NoShow">No Show</option>
+            </select>
+        </div>
+    </div>
+
+    @if (filteredAppointments?.Any() == true)
+    {
+        <div class="row">
+            @foreach (var appointment in filteredAppointments)
+            {
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title text-primary">@appointment.Service.ServiceName</h5>
+                                <span class="badge @GetStatusBadgeClass(appointment.Status)">
+                                    @appointment.Status.ToString()
+                                </span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-calendar text-muted me-2"></i>
+                                    <span>@appointment.ScheduledAt.ToString("MMMM dd, yyyy")</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-clock text-muted me-2"></i>
+                                    <span>@appointment.ScheduledAt.ToString("hh:mm tt")</span>
+                                </div>
+                                <div class="d-flex align-items-start mb-2">
+                                    <i class="fas fa-map-marker-alt text-muted me-2 mt-1"></i>
+                                    <span>@appointment.Address.Street, @appointment.Address.City</span>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(appointment.Description))
+                            {
+                                <p class="text-muted small">@appointment.Description</p>
+                            }
+
+                            <div class="d-flex gap-2 mt-auto">
+                                <a href="/appointments/@appointment.Id" class="btn btn-outline-primary btn-sm">
+                                    View Details
+                                </a>
+                                @if (appointment.Status == AppointmentStatus.Scheduled)
+                                {
+                                    <button class="btn btn-outline-warning btn-sm" @onclick="() => ShowRescheduleModal(appointment.Id)">
+                                        Reschedule
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => CancelAppointment(appointment.Id)">
+                                        Cancel
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No appointments found</h4>
+            <p class="text-muted">Book your first DNA testing appointment to get started</p>
+            <a href="/services" class="btn btn-primary">Browse Services</a>
+        </div>
+    }
+</div>
+
+@code {
+    private User user = default!;
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+    private List<Appointment> appointments = new();
+    private List<Appointment> filteredAppointments = new();
+    private string searchTerm = "";
+
+    private string selectedStatus = "";
+    public string SelectedStatus
+    {
+        get => selectedStatus;
+        set
+        {
+            if (selectedStatus != value)
+            {
+                selectedStatus = value;
+                FilterAppointments();
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAppointments();
+        filteredAppointments = appointments.ToList();
+    }
+
+    private async Task LoadAppointments()
+    {
+        appointments = await DbContext.Appointments
+            .Include(a => a.Service)
+            .Include(a => a.Address)
+            .Where(a => a.UserId == user.Id)
+            .OrderByDescending(a => a.ScheduledAt)
+            .ToListAsync();
+    }
+
+    private void FilterAppointments()
+    {
+        filteredAppointments = appointments.Where(a =>
+            (string.IsNullOrEmpty(searchTerm) || 
+             a.Service.ServiceName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             a.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(selectedStatus) || a.Status.ToString() == selectedStatus)
+        ).ToList();
+    }
+
+    private string GetStatusBadgeClass(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.Scheduled => "bg-primary",
+            AppointmentStatus.Completed => "bg-success",
+            AppointmentStatus.Cancelled => "bg-danger",
+            AppointmentStatus.NoShow => "bg-warning",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task CancelAppointment(int appointmentId)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to cancel this appointment?");
+        if (confirmed)
+        {
+            var appointment = await DbContext.Appointments.FindAsync(appointmentId);
+            if (appointment != null)
+            {
+                appointment.Status = AppointmentStatus.Cancelled;
+                appointment.CancellationReason = "Cancelled by customer";
+                appointment.CancelledByUserId = "current-user-id";
+                
+                await DbContext.SaveChangesAsync();
+                await LoadAppointments();
+                FilterAppointments();
+            }
+        }
+    }
+
+    private void ShowRescheduleModal(int appointmentId)
+    {
+        // Implement reschedule modal
+        JSRuntime.InvokeVoidAsync("alert", "Reschedule functionality coming soon!");
+    }
+}

@@ -34,7 +34,7 @@ namespace Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("Disttrict")
+                    b.Property<string>("District")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -88,6 +88,12 @@ namespace Data.Migrations
                     b.Property<int>("AddressId")
                         .HasColumnType("int");
 
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CancelledByUserId")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -103,6 +109,9 @@ namespace Data.Migrations
 
                     b.Property<DateTime?>("LastUpdatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("SampleId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("ScheduledAt")
                         .HasColumnType("datetime(6)");
@@ -120,6 +129,8 @@ namespace Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AddressId");
+
+                    b.HasIndex("SampleId");
 
                     b.HasIndex("ServiceId");
 
@@ -242,9 +253,18 @@ namespace Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ServiceId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Results");
                 });
@@ -437,7 +457,6 @@ namespace Data.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("ProfilePictureUrl")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("SecurityStamp")
@@ -616,6 +635,10 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Data.Entities.Sample", "Sample")
+                        .WithMany()
+                        .HasForeignKey("SampleId");
+
                     b.HasOne("Data.Entities.Service", "Service")
                         .WithMany("Appointments")
                         .HasForeignKey("ServiceId")
@@ -629,6 +652,8 @@ namespace Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Address");
+
+                    b.Navigation("Sample");
 
                     b.Navigation("Service");
 
@@ -665,7 +690,15 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Data.Entities.User", "User")
+                        .WithMany("Results")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Service");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Data.Entities.Review", b =>
@@ -789,6 +822,8 @@ namespace Data.Migrations
                     b.Navigation("Feedbacks");
 
                     b.Navigation("Posts");
+
+                    b.Navigation("Results");
 
                     b.Navigation("Reviews");
 
