@@ -1,0 +1,262 @@
+@page "/locations"
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.EntityFrameworkCore;
+@inject Data.AppDbContext DbContext
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<PageTitle>Labs & Clinics</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="mb-4">
+                <h2><i class="fas fa-map-marked-alt me-2"></i>Labs & Clinics</h2>
+                <p class="text-muted">Find a convenient location near you for sample collection and testing services.</p>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Search by Location</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" @bind="searchTerm" @onkeypress="HandleKeyPress" placeholder="City, Province, District...">
+                                <button class="btn btn-outline-secondary" @onclick="SearchLocations">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Location Type</label>
+                            <select class="form-select" @bind="selectedType">
+                                <option value="">All Locations</option>
+                                <option value="Lab">Labs</option>
+                                <option value="Clinic">Clinics</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Province</label>
+                            <select class="form-select" @bind="selectedProvince">
+                                <option value="">All Provinces</option>
+                                @if (availableProvinces?.Any() == true)
+                                {
+                                    @foreach (var province in availableProvinces)
+                                    {
+                                        <option value="@province">@province</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">City</label>
+                            <select class="form-select" @bind="selectedCity">
+                                <option value="">All Cities</option>
+                                @if (availableCities?.Any() == true)
+                                {
+                                    @foreach (var city in availableCities)
+                                    {
+                                        <option value="@city">@city</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-1 mb-3 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" @onclick="SearchLocations">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            @if (filteredLocations?.Any() == true)
+            {
+                <div class="row">
+                    @foreach (var location in filteredLocations)
+                    {
+                        <div class="col-lg-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="card-title">
+                                                <i class="fas fa-@(GetLocationIcon(location.LocationType)) me-2"></i>
+                                                @($"{location.LocationType} - {location.District}")
+                                            </h5>
+                                            <span class="badge bg-@(location.LocationType == LocationType.Lab ? "primary" : "success")">
+                                                @location.LocationType
+                                            </span>
+                                        </div>
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => BookAppointment(location.Id)">
+                                            <i class="fas fa-calendar-plus me-1"></i>Book
+                                        </button>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <h6><i class="fas fa-map-marker-alt me-2"></i>Address</h6>
+                                        <p class="mb-1">@location.Street</p>
+                                        <p class="mb-1">@location.Ward, @location.District</p>
+                                        <p class="mb-0">@location.City, @location.Province @location.ZipCode</p>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(location.OpeningHours))
+                                    {
+                                        <div class="mb-3">
+                                            <h6><i class="fas fa-clock me-2"></i>Opening Hours</h6>
+                                            <p class="mb-0">@location.OpeningHours</p>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(location.Notes))
+                                    {
+                                        <div class="mb-3">
+                                            <h6><i class="fas fa-info-circle me-2"></i>Additional Information</h6>
+                                            <p class="mb-0">@location.Notes</p>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-flex justify-content-between">
+                                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => GetDirections(location)">
+                                            <i class="fas fa-directions me-1"></i>Directions
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" @onclick="() => ViewDetails(location)">
+                                            <i class="fas fa-info me-1"></i>Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+                    <h4>No locations found</h4>
+                    <p class="text-muted">Try adjusting your search criteria or check back later.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Address>? allLocations;
+    private List<Address>? filteredLocations;
+    private List<string>? availableProvinces;
+    private List<string>? availableCities;
+    
+    private string searchTerm = string.Empty;
+    private string selectedType = string.Empty;
+    private string selectedProvince = string.Empty;
+    private string selectedCity = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLocations();
+        LoadFilterOptions();
+        filteredLocations = allLocations;
+    }
+
+    private async Task LoadLocations()
+    {
+        // Load only Lab and Clinic addresses that are active
+        allLocations = await DbContext.Addresses
+            .Where(a => a.LocationType == LocationType.Lab || a.LocationType == LocationType.Clinic)
+            .Where(a => !a.IsDeleted)
+            .OrderBy(a => a.Province)
+            .ThenBy(a => a.City)
+            .ThenBy(a => a.District)
+            .ToListAsync();
+    }
+
+    private void LoadFilterOptions()
+    {
+        if (allLocations?.Any() == true)
+        {
+            availableProvinces = allLocations
+                .Select(l => l.Province)
+                .Distinct()
+                .OrderBy(p => p)
+                .ToList();
+
+            availableCities = allLocations
+                .Select(l => l.City)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+        }
+    }
+
+    private async Task SearchLocations()
+    {
+        if (allLocations == null) return;
+
+        filteredLocations = allLocations.Where(location =>
+        {
+            var matchesSearch = string.IsNullOrEmpty(searchTerm) ||
+                location.City.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                location.Province.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                location.District.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                location.Ward.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
+
+            var matchesType = string.IsNullOrEmpty(selectedType) ||
+                location.LocationType.ToString() == selectedType;
+
+            var matchesProvince = string.IsNullOrEmpty(selectedProvince) ||
+                location.Province.Equals(selectedProvince, StringComparison.OrdinalIgnoreCase);
+
+            var matchesCity = string.IsNullOrEmpty(selectedCity) ||
+                location.City.Equals(selectedCity, StringComparison.OrdinalIgnoreCase);
+
+            return matchesSearch && matchesType && matchesProvince && matchesCity;
+        }).ToList();
+
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchLocations();
+        }
+    }
+
+    private void BookAppointment(int locationId)
+    {
+        NavigationManager.NavigateTo($"/appointments/book?locationId={locationId}");
+    }
+
+    private void ViewDetails(Address location)
+    {
+        // Could navigate to a detailed view or show a modal with more information
+        // For now, we'll just show an alert with the details
+        JSRuntime.InvokeVoidAsync("alert", $"Location Details:\n\nAddress: {location.Street}, {location.Ward}, {location.District}\nCity: {location.City}, {location.Province}\nZip: {location.ZipCode}\n\nHours: {location.OpeningHours ?? "Not specified"}\nNotes: {location.Notes ?? "None"}");
+    }
+
+    private void GetDirections(Address location)
+    {
+        var address = $"{location.Street}, {location.Ward}, {location.District}, {location.City}, {location.Province}";
+        var encodedAddress = Uri.EscapeDataString(address);
+        var mapsUrl = $"https://www.google.com/maps/search/?api=1&query={encodedAddress}";
+        
+        JSRuntime.InvokeVoidAsync("open", mapsUrl, "_blank");
+    }
+
+    private string GetLocationIcon(LocationType locationType)
+    {
+        return locationType switch
+        {
+            LocationType.Lab => "flask",
+            LocationType.Clinic => "clinic-medical",
+            _ => "map-marker-alt"
+        };
+    }
+}

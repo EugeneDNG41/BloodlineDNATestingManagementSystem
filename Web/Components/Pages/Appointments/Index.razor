@@ -7,7 +7,7 @@
 @using Web.Components.Account
 @inject IdentityUserAccessor UserAccessor
 @inject Data.AppDbContext DbContext
-@attribute [Authorize(Roles = "User")]
+@attribute [Authorize(Roles = "Customer")]
 @inject IJSRuntime JSRuntime
 
 <PageTitle>My Appointments</PageTitle>
@@ -54,7 +54,7 @@
                                     @appointment.Status.ToString()
                                 </span>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <div class="d-flex align-items-center mb-2">
                                     <i class="fas fa-calendar text-muted me-2"></i>
@@ -107,6 +107,7 @@
 </div>
 
 @code {
+
     private User user = default!;
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -130,18 +131,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         await LoadAppointments();
-        filteredAppointments = appointments.ToList();
+        filteredAppointments = appointments;
     }
 
     private async Task LoadAppointments()
     {
+
         appointments = await DbContext.Appointments
             .Include(a => a.Service)
             .Include(a => a.Address)
             .Where(a => a.UserId == user.Id)
-            .OrderByDescending(a => a.ScheduledAt)
-            .ToListAsync();
+            .OrderByDescending(a => a.ScheduledAt).ToListAsync();
     }
 
     private void FilterAppointments()

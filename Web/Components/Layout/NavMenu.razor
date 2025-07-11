@@ -1,10 +1,13 @@
 ﻿@implements IDisposable
-
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Web</a>
+        <a class="navbar-brand" href="">
+            <i class="fas fa-dna me-2"></i>DNA Testing Lab
+        </a>
     </div>
 </div>
 
@@ -12,56 +15,251 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
+        <!-- Public Navigation -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <i class="fas fa-home me-2"></i> Home
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            <NavLink class="nav-link" href="services">
+                <i class="fas fa-vial me-2"></i> Services
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            <NavLink class="nav-link" href="blog">
+                <i class="fas fa-newspaper me-2"></i> Blog
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auth">
-                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
-            </NavLink>
-        </div>
-
-        <AuthorizeView>
+        <!-- Authenticated User Navigation -->
+        <AuthorizeView Context="mainAuth">
             <Authorized>
+                <hr class="nav-divider">
+
+                <!-- Customer Navigation -->
+                <AuthorizeView Roles="Customer" Context="customerAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="appointments">
+                                <i class="fas fa-calendar me-2"></i> My Appointments
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="results">
+                                <i class="fas fa-file-medical me-2"></i> My Results
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="samples">
+                                <i class="fas fa-microscope me-2"></i> Sample Tracking
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="feedback">
+                                <i class="fas fa-comment-dots me-2"></i> Feedback
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- Staff Navigation -->
+                <AuthorizeView Roles="Staff" Context="staffAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="staff/appointments">
+                                <i class="fas fa-calendar-check me-2"></i> My Assignments
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="staff/samples">
+                                <i class="fas fa-flask me-2"></i> Sample Processing
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- Manager Navigation -->
+                <AuthorizeView Roles="Manager,Admin" Context="managerAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="manager/dashboard">
+                                <i class="fas fa-chart-line me-2"></i> Manager Dashboard
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="manager/appointments">
+                                <i class="fas fa-calendar-check me-2"></i> Appointment Overview
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="manager/staff">
+                                <i class="fas fa-user-tie me-2"></i> Staff Management
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="manager/reports">
+                                <i class="fas fa-chart-bar me-2"></i> Reports & Analytics
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="manager/services">
+                                <i class="fas fa-cog me-2"></i> Service Oversight
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="manager/quality">
+                                <i class="fas fa-award me-2"></i> Quality Control
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- Admin Navigation -->
+                <AuthorizeView Roles="Admin" Context="adminAuth">
+                    <Authorized>
+                        <hr class="nav-divider">
+                        <div class="nav-section-header px-3">
+                            <small class="text-muted text-uppercase">Administration</small>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin">
+                                <i class="fas fa-tachometer-alt me-2"></i> Admin Dashboard
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/users">
+                                <i class="fas fa-users me-2"></i> User Management
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/system">
+                                <i class="fas fa-server me-2"></i> System Settings
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/roles">
+                                <i class="fas fa-shield-alt me-2"></i> Role Management
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- Shared Admin/Manager Navigation -->
+                <AuthorizeView Roles="Admin,Manager" Context="adminManagerAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/services">
+                                <i class="fas fa-cogs me-2"></i> Service Management
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/appointments">
+                                <i class="fas fa-calendar-alt me-2"></i> All Appointments
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/samples">
+                                <i class="fas fa-vials me-2"></i> All Samples
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/feedback">
+                                <i class="fas fa-comments me-2"></i> Customer Feedback
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/posts">
+                                <i class="fas fa-edit me-2"></i> Blog Management
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <hr class="nav-divider">
+
+                <!-- User Profile Section -->
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                    <div class="user-profile-section">
+                        @if (!string.IsNullOrEmpty(userProfilePicture))
+                        {
+                            <img src="@userProfilePicture" alt="Profile" class="user-avatar me-2">
+                        }
+                        else
+                        {
+                            <div class="user-avatar-placeholder me-2">
+                                @(userName?.Substring(0, 1).ToUpper() ?? "U")
+                            </div>
+                        }
+                        <div class="user-info">
+                            <div class="user-name">@userName</div>
+                            <div class="user-role">@userRole</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="account/profile">
+                        <i class="fas fa-user-cog me-2"></i> My Profile
                     </NavLink>
                 </div>
+
                 <div class="nav-item px-3">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
-                        </button>
-                    </form>
+                    <button type="button" class="nav-link logout-btn" @onclick="Logout">
+                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                    </button>
                 </div>
             </Authorized>
+
             <NotAuthorized>
+                <hr class="nav-divider">
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+                    <NavLink class="nav-link" href="account/login">
+                        <i class="fas fa-sign-in-alt me-2"></i> Login
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                    <NavLink class="nav-link" href="account/register">
+                        <i class="fas fa-user-plus me-2"></i> Register
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+
+        <!-- Quick Actions for Guests -->
+        <AuthorizeView Context="guestAuth">
+            <NotAuthorized>
+                <hr class="nav-divider">
+                <div class="nav-section-header px-3">
+                    <small class="text-muted text-uppercase">Get Started</small>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="services">
+                        <i class="fas fa-rocket me-2"></i> Browse Tests
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="appointments/book">
+                        <i class="fas fa-calendar-plus me-2"></i> Book Appointment
                     </NavLink>
                 </div>
             </NotAuthorized>
@@ -69,13 +267,148 @@
     </nav>
 </div>
 
+<style>
+    .nav-divider {
+        border-color: rgba(255, 255, 255, 0.1);
+        margin: 0.5rem 1rem;
+    }
+
+    .nav-section-header {
+        padding: 0.5rem 0 0.25rem 0;
+    }
+
+    .user-profile-section {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .user-avatar-placeholder {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #007bff;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .user-name {
+        font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .user-role {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: capitalize;
+    }
+
+    .logout-btn {
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem 0;
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+    }
+
+        .logout-btn:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+    .navbar-brand {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0;
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        border-radius: 0.375rem;
+        margin: 0.125rem 0;
+    }
+
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+</style>
+
 @code {
     private string? currentUrl;
+    private string? userName;
+    private string? userRole;
+    private string? userProfilePicture;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+
+        await LoadUserInfo();
+    }
+
+    private async Task LoadUserInfo()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userName = user.Identity.Name;
+
+            // Get user role
+            if (user.IsInRole("Admin"))
+                userRole = "Administrator";
+            else if (user.IsInRole("Manager"))
+                userRole = "Manager";
+            else if (user.IsInRole("Staff"))
+                userRole = "Staff Member";
+            else if (user.IsInRole("Customer"))
+                userRole = "Customer";
+            else
+                userRole = "Guest";
+
+            // You can load profile picture from claims or database
+            userProfilePicture = user.FindFirst("ProfilePictureUrl")?.Value;
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -84,9 +417,18 @@
         StateHasChanged();
     }
 
+    private async Task Logout()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('logoutForm').submit()");
+    }
+
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
 
+<!-- Hidden logout form -->
+<form id="logoutForm" action="/account/logout" method="post" style="display: none;">
+    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+</form>

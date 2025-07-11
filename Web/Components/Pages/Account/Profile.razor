@@ -1,0 +1,390 @@
+@page "/account/profile"
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Data.Entities
+@using Web.Components.Account.Shared
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Web.Components.Account
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+@inject IdentityRedirectManager RedirectManager
+@inject NavigationManager NavigationManager
+@inject IdentityUserAccessor UserAccessor
+@inject IEmailSender<User> EmailSender
+@inject Data.AppDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<Profile> Logger
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>My Profile</PageTitle>
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(currentUser?.ProfilePictureUrl))
+                    {
+                        <img src="@currentUser.ProfilePictureUrl" alt="Profile Picture" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                    }
+                    else
+                    {
+                        <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 120px; height: 120px; font-size: 3rem;">
+                            @(currentUser?.FullName?.Substring(0, 1).ToUpper() ?? "U")
+                        </div>
+                    }
+
+                    <h4>@currentUser?.FullName</h4>
+                    <p class="text-muted">@currentUser?.Email</p>
+
+                    <div class="row text-center mt-4">
+                        <div class="col-4">
+                            <div class="h5 mb-0">@(currentUser?.Appointments?.Count ?? 0)</div>
+                            <small class="text-muted">Appointments</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h5 mb-0">@(currentUser?.Results?.Count ?? 0)</div>
+                            <small class="text-muted">Results</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h5 mb-0">@(currentUser?.Reviews?.Count ?? 0)</div>
+                            <small class="text-muted">Reviews</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Account Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Email Verified</span>
+                        @if (currentUser?.EmailConfirmed == true)
+                        {
+                            <span class="badge bg-success">Verified</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning">Pending</span>
+                        }
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Phone Verified</span>
+                        @if (currentUser?.PhoneNumberConfirmed == true)
+                        {
+                            <span class="badge bg-success">Verified</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning">Pending</span>
+                        }
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Member Since</span>
+                        <span>@currentUser?.CreatedAt.ToString("MMM yyyy")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Email</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="EmailInput" FormName="update-email" OnValidSubmit="UpdateEmailAsync" method="post">
+                        <DataAnnotationsValidator />
+
+                        <div class="row mb-3">
+                            <label>Email Address</label>
+                            <InputText @bind-Value="EmailInput.Email" class="form-control" placeholder="Email Address" />
+                            <ValidationMessage For="@(() => EmailInput.Email)" class="text-danger" />
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Email
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        
+            <div class="card shadow-sm">
+                <div class="card-header">                    
+                    <h5 class="mb-0">Personal Information</h5>
+                </div>
+                <div class="card-body">                   
+                    <EditForm Model="ProfileInput" FormName="update-profile" OnValidSubmit="UpdateProfileAsync" method="post">
+                        <DataAnnotationsValidator />
+
+                        <div class="row mb-3">
+                            <label>Full Name</label>
+                            <InputText @bind-Value="ProfileInput.FullName" class="form-control" placeholder="Full name" />
+                            <ValidationMessage For="() => ProfileInput.FullName" />                          
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label>Phone Number</label>
+                                <InputText @bind-Value="ProfileInput.PhoneNumber" class="form-control" placeholder="Phone number" />                              
+                                <ValidationMessage For="() => ProfileInput.PhoneNumber" />
+                            </div>
+                            <div class="col-md-6">
+                                <label>Date of Birth</label>
+                                <InputDate @bind-Value="ProfileInput.DateOfBirth" class="form-control" />                                
+                                <ValidationMessage For="() => ProfileInput.DateOfBirth" />
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Profile
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Change Password</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="PasswordInput" FormName="change-password" OnValidSubmit="ChangePasswordAsync" method="post"> 
+                         <DataAnnotationsValidator /> 
+                         <div class="form-floating mb-3"> 
+                             <InputText @bind-Value="PasswordInput.CurrentPassword" type="password" class="form-control" placeholder="Current password" /> 
+                             <label>Current Password</label> 
+                             <ValidationMessage For="() => PasswordInput.CurrentPassword" />
+                         </div> 
+                         <div class="row mb-3">
+                            <div class="form-floating col-md-6">
+                                <InputText @bind-Value="PasswordInput.NewPassword" type="password" class="form-control" placeholder="New password" /> 
+                                 <label>New Password</label> 
+                                 <ValidationMessage For="() => PasswordInput.NewPassword" /> 
+                             </div>
+
+                            <div class="form-floating col-md-6">
+                                <InputText @bind-Value="PasswordInput.ConfirmPassword" type="password" class="form-control" placeholder="Confirm password" /> 
+                                 <label>Confirm Password</label> 
+                                 <ValidationMessage For="() => PasswordInput.ConfirmPassword" /> 
+                             </div> 
+                         </div>
+
+                         <button type="submit" class="w-100 btn btn-warning">Change Password</button> 
+                    </EditForm>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">My Addresses</h5>
+                    <a href="/account/addresses" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-cog me-1"></i>Manage All
+                    </a>
+                </div>
+                <div class="card-body">
+                    @if (userAddresses?.Any() == true)
+                    {
+                        @foreach (var address in userAddresses.Take(2))
+                        {
+                            <div class="border rounded p-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6><i class="fas fa-home me-2"></i>Home Address</h6>
+                                        <p class="mb-1">@address.Street</p>
+                                        @if (!string.IsNullOrEmpty(address.Ward))
+                                        {
+                                            <p class="mb-1">@address.Ward, @address.District</p>
+                                        }
+                                        <p class="mb-0 text-muted">@address.City, @address.Province @address.ZipCode</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        @if (userAddresses.Count > 2)
+                        {
+                            <p class="text-muted mb-2">And @(userAddresses.Count - 2) more addresses...</p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">No addresses added yet.</p>
+                    }
+
+                    <a href="/account/addresses" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>@(userAddresses?.Any() == true ? "Add Another Address" : "Add Your First Address")
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? statusMessage;
+    private User? currentUser;
+    private List<Address> userAddresses = new();
+    [SupplyParameterFromForm(FormName = "update-email")]
+    private EmailUpdateModel EmailInput { get; set; } = new();
+    [SupplyParameterFromForm(FormName = "update-profile")]
+    private ProfileInputModel ProfileInput { get; set; } = new();
+
+    [SupplyParameterFromForm(FormName = "change-password")]
+    private PasswordInputModel PasswordInput { get; set; } = new();
+    private bool isUpdating = false;
+    private bool isChangingPassword = false;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private async Task UpdateEmailAsync() {
+        if (currentUser != null && !string.IsNullOrEmpty(EmailInput.Email))
+        {
+            var code = await UserManager.GenerateChangeEmailTokenAsync(currentUser, EmailInput.Email);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+                NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
+                new Dictionary<string, object?>
+                    {
+                        ["userId"] = currentUser.Id,
+                        ["email"] = EmailInput.Email,
+                        ["code"] = code
+                    });
+            await EmailSender.SendConfirmationLinkAsync(currentUser, EmailInput.Email, HtmlEncoder.Default.Encode(callbackUrl));
+            await JSRuntime.InvokeVoidAsync("alert", "Confirmation link to change email sent. Please check your email.");
+        }
+    }
+    private async Task UpdateProfileAsync()
+    {
+        if (currentUser != null) {
+            currentUser.FullName = ProfileInput.FullName;
+            currentUser.PhoneNumber = ProfileInput.PhoneNumber;
+            currentUser.DateOfBirth = ProfileInput.DateOfBirth;
+            currentUser.UpdatedAt = DateTime.UtcNow;
+            var result = await UserManager.UpdateAsync(currentUser);
+
+            if (result.Succeeded)
+            {
+                //await SignInManager.RefreshSignInAsync(currentUser);
+                await JSRuntime.InvokeVoidAsync("alert", "Profile updated successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Error updating profile: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+            
+        }
+    }
+    private async Task ChangePasswordAsync()
+    {
+        if (currentUser != null)
+        {
+            var result = await UserManager.ChangePasswordAsync(currentUser, PasswordInput.CurrentPassword, PasswordInput.NewPassword);
+            if (result.Succeeded)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Password changed successfully!");
+                await SignInManager.RefreshSignInAsync(currentUser!);
+                PasswordInput = new PasswordInputModel();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Error changing password: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+        }
+        
+    }
+    protected override async Task OnInitializedAsync()
+    {
+
+        await LoadCurrentUser();
+        await LoadUserAddresses();
+        PopulateProfileModel();
+    }
+    
+    private async Task LoadCurrentUser()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = UserManager.GetUserId(authState.User);
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            currentUser = await DbContext.Users
+                .Include(u => u.Appointments)
+                .Include(u => u.Results)
+                .Include(u => u.Reviews)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+        }
+    }
+    private async Task LoadUserAddresses()
+    {
+        if (currentUser != null)
+        {
+            userAddresses = await DbContext.Addresses
+                .Where(a => a.UserId == currentUser.Id)
+                .ToListAsync();
+        }
+    }
+    private void PopulateProfileModel()
+    {
+        if (currentUser != null)
+        {
+            EmailInput.Email = currentUser.Email ?? "";
+            ProfileInput.FullName = currentUser.FullName;
+            ProfileInput.PhoneNumber = currentUser.PhoneNumber ?? "";
+            ProfileInput.DateOfBirth = currentUser.DateOfBirth;
+        }
+    }
+    private void ResetForm()
+    {
+        PopulateProfileModel();
+    }
+
+    private sealed class EmailUpdateModel 
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+    }
+    private sealed class ProfileInputModel
+    {
+
+        [Required]
+        public string FullName { get; set; } = "";
+
+        [Phone]
+        [Display(Name = "Phone Number")]
+        public string PhoneNumber { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Date of Birth")]
+        public DateTime DateOfBirth { get; set; }
+    }
+
+    private sealed class PasswordInputModel
+    {
+        [Required]
+        [DataType(DataType.Password)]
+        public string CurrentPassword { get; set; } = "";
+
+        [Required]
+        [StringLength(100, MinimumLength = 3)]
+        [DataType(DataType.Password)]
+        public string NewPassword { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Compare(nameof(NewPassword))]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}
+
+

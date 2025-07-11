@@ -1,5 +1,6 @@
 using Data;
 using Data.Entities;
+using MailKit.Net.Smtp;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,7 @@ namespace Web
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public async static Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -71,9 +72,10 @@ namespace Web
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
-
-            builder.Services.AddSingleton<IEmailSender<User>, IdentityNoOpEmailSender>();
-
+            builder.Services.AddSingleton<ISmtpClient, SmtpClient>();
+            builder.Services.Configure<MailConfiguration>(builder.Configuration.GetSection("MailConfiguration"));
+            builder.Services.AddSingleton<IEmailSender<User>, EmailSender>();
+            await builder.Services.InitializeAsync();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -93,7 +95,7 @@ namespace Web
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
 
-            app.Run();
+            await app.RunAsync();
         }
     }
 }
