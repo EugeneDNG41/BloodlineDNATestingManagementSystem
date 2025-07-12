@@ -1,4 +1,5 @@
 ﻿using Data.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -51,6 +52,20 @@ namespace Data
                 .WithMany(u => u.SamplesDonated)
                 .HasForeignKey(a => a.DonorId)
                 .OnDelete(DeleteBehavior.Cascade);
-        }
+            modelBuilder.Entity<IdentityRole>().HasData
+            (
+                new IdentityRole { Name = "Admin", NormalizedName = "ADMIN" },
+                new IdentityRole { Name = "Manager", NormalizedName = "MANAGER" },
+                new IdentityRole { Name = "Staff", NormalizedName = "STAFF" },
+                new IdentityRole { Name = "Customer", NormalizedName = "CUSTOMER" }
+            );
+            modelBuilder.Entity<Service>().HasData
+            (
+                new Service { Id = 1, ServiceName = "Basic Ancestry DNA", Description = "Discover your ethnic background and find DNA matches with our basic ancestry test. Get insights into your family history and genetic heritage.", Price = 99.99m, Duration = "2-3 weeks" },
+                new Service { Id = 2, ServiceName = "Advanced Bloodline Analysis", Description = "Comprehensive bloodline analysis including detailed family tree construction and advanced genetic markers.", Price = 299.99m, Duration = "4-6 weeks" },
+                new Service { Id = 3, ServiceName = "Paternity Testing", Description = "Accurate paternity testing with 99.9% accuracy. Confidential and legally admissible results.", Price = 199.99m, Duration = "1-2 weeks" },
+                new Service { Id = 4, ServiceName = "Health + Ancestry", Description = "Complete package including ancestry information plus health predispositions and carrier status reports.", Price = 499.99m, Duration = "3-4 weeks" }
+            );
+        }      
     }
 }

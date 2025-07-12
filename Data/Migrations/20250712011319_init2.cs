@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace Data.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class init2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -411,6 +413,28 @@ namespace Data.Migrations
                         principalTable: "Services",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.InsertData(
+                table: "AspNetRoles",
+                columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
+                values: new object[,]
+                {
+                    { "454cb6f8-b35c-4f53-b2a6-84380ee4cd78", null, "Customer", "CUSTOMER" },
+                    { "a6905476-8940-4ba7-8c23-fbf64fef4ca2", null, "Staff", "STAFF" },
+                    { "af8ae989-efe8-4b1c-93ae-852617e2ea7d", null, "Manager", "MANAGER" },
+                    { "e72014d9-f5f1-4c6c-86f5-45dd10952995", null, "Admin", "ADMIN" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Services",
+                columns: new[] { "Id", "Description", "Duration", "IsDeleted", "Price", "ServiceName" },
+                values: new object[,]
+                {
+                    { 1, "Discover your ethnic background and find DNA matches with our basic ancestry test. Get insights into your family history and genetic heritage.", "2-3 weeks", false, 99.99m, "Basic Ancestry DNA" },
+                    { 2, "Comprehensive bloodline analysis including detailed family tree construction and advanced genetic markers.", "4-6 weeks", false, 299.99m, "Advanced Bloodline Analysis" },
+                    { 3, "Accurate paternity testing with 99.9% accuracy. Confidential and legally admissible results.", "1-2 weeks", false, 199.99m, "Paternity Testing" },
+                    { 4, "Complete package including ancestry information plus health predispositions and carrier status reports.", "3-4 weeks", false, 499.99m, "Health + Ancestry" }
                 });
 
             migrationBuilder.CreateIndex(

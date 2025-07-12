@@ -119,7 +119,7 @@
         results = await DbContext.Results
             .Include(r => r.Service)
             .Include(r => r.Samples)
-            .Where(r => r.UserId == user.Id) // Replace with actual user ID
+            .Where(r => r.UserId == user.Id && !r.IsDeleted) // Replace with actual user ID
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
     }

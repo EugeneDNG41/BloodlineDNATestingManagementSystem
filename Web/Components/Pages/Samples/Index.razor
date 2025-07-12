@@ -178,7 +178,7 @@
     private async Task LoadSamples()
     {
         samples = await DbContext.Samples
-            .Where(s => s.DonorId == user.Id)
+            .Where(s => s.DonorId == user.Id && !s.IsDeleted)
             .OrderByDescending(s => s.CollectionDate)
             .ToListAsync();
     }

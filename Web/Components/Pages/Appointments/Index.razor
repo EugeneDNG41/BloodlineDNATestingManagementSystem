@@ -142,7 +142,7 @@
         appointments = await DbContext.Appointments
             .Include(a => a.Service)
             .Include(a => a.Address)
-            .Where(a => a.UserId == user.Id)
+            .Where(a => a.UserId == user.Id && !a.IsDeleted)
             .OrderByDescending(a => a.ScheduledAt).ToListAsync();
     }
 

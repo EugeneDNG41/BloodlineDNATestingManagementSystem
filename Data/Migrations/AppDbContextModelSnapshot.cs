@@ -402,6 +402,44 @@ namespace Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Services");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Discover your ethnic background and find DNA matches with our basic ancestry test. Get insights into your family history and genetic heritage.",
+                            Duration = "2-3 weeks",
+                            IsDeleted = false,
+                            Price = 99.99m,
+                            ServiceName = "Basic Ancestry DNA"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Comprehensive bloodline analysis including detailed family tree construction and advanced genetic markers.",
+                            Duration = "4-6 weeks",
+                            IsDeleted = false,
+                            Price = 299.99m,
+                            ServiceName = "Advanced Bloodline Analysis"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Description = "Accurate paternity testing with 99.9% accuracy. Confidential and legally admissible results.",
+                            Duration = "1-2 weeks",
+                            IsDeleted = false,
+                            Price = 199.99m,
+                            ServiceName = "Paternity Testing"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Description = "Complete package including ancestry information plus health predispositions and carrier status reports.",
+                            Duration = "3-4 weeks",
+                            IsDeleted = false,
+                            Price = 499.99m,
+                            ServiceName = "Health + Ancestry"
+                        });
                 });
 
             modelBuilder.Entity("Data.Entities.User", b =>
@@ -510,6 +548,32 @@ namespace Data.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "e72014d9-f5f1-4c6c-86f5-45dd10952995",
+                            Name = "Admin",
+                            NormalizedName = "ADMIN"
+                        },
+                        new
+                        {
+                            Id = "af8ae989-efe8-4b1c-93ae-852617e2ea7d",
+                            Name = "Manager",
+                            NormalizedName = "MANAGER"
+                        },
+                        new
+                        {
+                            Id = "a6905476-8940-4ba7-8c23-fbf64fef4ca2",
+                            Name = "Staff",
+                            NormalizedName = "STAFF"
+                        },
+                        new
+                        {
+                            Id = "454cb6f8-b35c-4f53-b2a6-84380ee4cd78",
+                            Name = "Customer",
+                            NormalizedName = "CUSTOMER"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

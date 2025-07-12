@@ -75,7 +75,7 @@ namespace Web
             builder.Services.AddSingleton<ISmtpClient, SmtpClient>();
             builder.Services.Configure<MailConfiguration>(builder.Configuration.GetSection("MailConfiguration"));
             builder.Services.AddSingleton<IEmailSender<User>, EmailSender>();
-            //await builder.Services.InitializeAsync();
+            await builder.Services.InitializeAsync();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

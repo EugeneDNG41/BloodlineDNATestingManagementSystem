@@ -1,5 +1,8 @@
-﻿using Data.Entities;
+﻿using Data;
+using Data.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Web
 {
@@ -10,7 +13,9 @@ namespace Web
             var serviceProvider = service.BuildServiceProvider();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
-
+            var db = serviceProvider.GetRequiredService<AppDbContext>();
+            if (!await db.Database.CanConnectAsync() || (await db.Database.GetPendingMigrationsAsync()).Any())
+                return service;
             // Define roles
             string[] roles = { "Admin", "Manager", "Staff", "Customer" };
 
@@ -21,7 +26,7 @@ namespace Web
             }
 
             // Create admin user if it doesn't exist
-            string adminEmail = "cs.academeet@example.com";
+            string adminEmail = "admin@admin.com";
             string adminPassword = "Admin@123";
 
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
