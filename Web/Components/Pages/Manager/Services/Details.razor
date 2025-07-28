@@ -1,0 +1,50 @@
+@page "/manager/services/{id:int}"
+@using Data.Entities
+@inject NavigationManager Navigation
+@inject global::Services.Interfaces.IServiceService ServiceService
+@rendermode InteractiveServer
+
+<PageTitle>@(service?.ServiceName ?? "Service Details") (Manager)</PageTitle>
+
+@if (service != null)
+{
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/manager/services">Service Management</a></li>
+                <li class="breadcrumb-item active">@service.ServiceName</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h1 class="display-5 text-primary mb-0">@service.ServiceName</h1>
+                        <div class="h2 text-success mb-0">$@service.Price.ToString("F2")</div>
+                        <div class="mb-2 text-muted">Duration: @service.Duration</div>
+                        <p class="lead">@service.Description</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <h2>Service Not Found</h2>
+        <p class="text-muted">The requested service could not be found.</p>
+        <a href="/manager/services" class="btn btn-primary">Back to Services</a>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Service? service;
+
+    protected override async Task OnInitializedAsync()
+    {
+        service = await ServiceService.GetByIdAsync(Id);
+    }
+} 
