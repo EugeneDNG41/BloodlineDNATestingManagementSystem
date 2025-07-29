@@ -50,6 +50,59 @@ namespace Web
                     throw new Exception("Failed to create admin user: " + string.Join(", ", result.Errors.Select(e => e.Description)));
                 }            
             }
+
+            string staffEmail = "staff@staff.com";
+            string staffPassword = "Staff@123";
+
+            var staffUser = await userManager.FindByEmailAsync(staffEmail);
+            if (staffUser == null)
+            {
+                staffUser = new User
+                {
+                    FullName = "Staff",
+                    UserName = staffEmail,
+                    Email = staffEmail,
+                    EmailConfirmed = true
+                };
+
+                var result1 = await userManager.CreateAsync(staffUser, staffPassword);
+                if (result1.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(staffUser, "Staff");
+                }
+                else
+                {
+                    throw new Exception("Failed to create staff user: " + string.Join(", ", result1.Errors.Select(e => e.Description)));
+                }
+            }
+
+            string customerEmail = "customer@customer.com";
+            string customerPassword = "customer@123";
+
+            var customerUser = await userManager.FindByEmailAsync(customerEmail);
+            if (customerUser == null)
+            {
+                customerUser = new User
+                {
+                    FullName = "Customer",
+                    UserName = customerEmail,
+                    Email = customerEmail,
+                    EmailConfirmed = true
+                };
+
+                var result1 = await userManager.CreateAsync(customerUser, customerPassword);
+                if (result1.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(customerUser, "Customer");
+                }
+                else
+                {
+                    throw new Exception("Failed to create staff user: " + string.Join(", ", result1.Errors.Select(e => e.Description)));
+                }
+            }
+
+
+
             return service;
         }
     }

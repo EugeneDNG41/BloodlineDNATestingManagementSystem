@@ -1,7 +1,11 @@
-﻿@implements IDisposable
+﻿@using Data.Entities
+@using Microsoft.AspNetCore.Identity
+@implements IDisposable
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
+@inject SignInManager<User> SignInManager
+@inject NavigationManager NavigationManager
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -82,6 +86,8 @@
                                 <i class="fas fa-flask me-2"></i> Sample Processing
                             </NavLink>
                         </div>
+
+                       
                     </Authorized>
                 </AuthorizeView>
 
@@ -157,6 +163,8 @@
                                 <i class="fas fa-shield-alt me-2"></i> Role Management
                             </NavLink>
                         </div>
+
+                        
                     </Authorized>
                 </AuthorizeView>
 
@@ -224,7 +232,7 @@
                 </div>
 
                 <div class="nav-item px-3">
-                    <button type="button" class="nav-link logout-btn" @onclick="Logout">
+                    <button type="button" class="nav-link logout-btn" @onclick="LogoutAsync">
                         <i class="fas fa-sign-out-alt me-2"></i> Logout
                     </button>
                 </div>
@@ -417,9 +425,15 @@
         StateHasChanged();
     }
 
-    private async Task Logout()
+    // private async Task Logout()
+    // {
+    //     await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('logoutForm').submit()");
+    // }
+
+    private async Task LogoutAsync()
     {
-        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('logoutForm').submit()");
+        await SignInManager.SignOutAsync();
+        NavigationManager.NavigateTo("/", forceLoad: true);
     }
 
     public void Dispose()

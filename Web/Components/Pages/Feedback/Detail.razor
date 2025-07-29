@@ -1,0 +1,106 @@
+﻿@page "/feedback/{Id:int}"
+@using Data.Entities
+@using Data.Enum
+@using global::Services.Interfaces
+@inject IFeedbackService FeedbackService
+@inject NavigationManager NavigationManager
+
+<div class="container mt-4">
+    @if (feedback == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>Feedback Details</h3>
+                <span class="badge bg-@GetStatusColor(feedback.Status)">@feedback.Status</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h5>Message</h5>
+                    <p>@feedback.Message</p>
+                </div>
+                <div class="mb-3">
+                    <h5>Type</h5>
+                    <p>@feedback.Type</p>
+                </div>
+                <div class="mb-3">
+                    <h5>Status</h5>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <select class="form-select"
+                                    @bind="SelectedStatus"
+                                    @bind:event="onchange">
+                                @foreach (var status in Enum.GetValues(typeof(FeedbackStatus)))
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </select>
+                        </Authorized>
+                        <NotAuthorized>
+                            <span>@feedback.Status</span>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+                <div class="mb-3">
+                    <h5>Submitted By</h5>
+                    <p>@feedback.User?.UserName</p>
+                </div>
+                <div class="mb-3">
+                    <h5>Submitted On</h5>
+                    <p>@feedback.CreatedAt.ToString("MMM dd, yyyy HH:mm")</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Feedback? feedback;
+
+    private FeedbackStatus _selectedStatus;
+    private FeedbackStatus SelectedStatus
+    {
+        get => _selectedStatus;
+        set
+        {
+            if (_selectedStatus != value)
+            {
+                _selectedStatus = value;
+                _ = UpdateStatusAsync(); // Fire-and-forget async call
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        feedback = await FeedbackService.GetFeedbackByIdAsync(Id);
+        if (feedback != null)
+        {
+            _selectedStatus = feedback.Status;
+        }
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        if (feedback != null)
+        {
+            feedback.Status = _selectedStatus;
+            await FeedbackService.UpdateFeedbackAsync(feedback);
+        }
+    }
+
+    private string GetStatusColor(FeedbackStatus status) => status switch
+    {
+        FeedbackStatus.Pending => "warning",
+        FeedbackStatus.Closed => "info",
+        FeedbackStatus.Resolved => "success",
+        FeedbackStatus.Reviewed => "danger",
+        _ => "secondary"
+    };
+}

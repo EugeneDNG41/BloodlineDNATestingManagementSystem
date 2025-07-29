@@ -1,0 +1,304 @@
+﻿@page "/admin/feedback/index"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@inject Data.AppDbContext DbContext
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Manage Feedback - Admin</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Manage Feedback</h1>
+        <div class="d-flex gap-3 align-items-center">
+            <input class="form-control" style="width: 300px;" type="text" placeholder="Search feedback..."
+                   @bind="SearchTerm" />
+            <select class="form-select" @bind="SelectedType">
+                <option value="">All Types</option>
+                @foreach (var type in Enum.GetValues<FeedbackType>())
+                {
+                    <option value="@type">@type</option>
+                }
+            </select>
+            <select class="form-select" @bind="SelectedStatus">
+                <option value="">All Status</option>
+                @foreach (var status in Enum.GetValues<FeedbackStatus>())
+                {
+                    <option value="@status">@status</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!filteredFeedback.Any())
+    {
+        <div class="alert alert-info">No feedback found.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Message</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var feedback in filteredFeedback)
+                        {
+                            <tr>
+                                <td>@feedback.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                                <td>
+                                    <div>
+                                        <div class="fw-semibold">@feedback.User?.FullName ?? "Unknown"</div>
+                                        <small class="text-muted">@feedback.User?.Email ?? "N/A"</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge @GetTypeBadgeClass(feedback.Type)">
+                                        @feedback.Type
+                                    </span>
+                                </td>
+                                <td>
+                                    @(feedback.Message.Length > 100
+                                                                ? feedback.Message[..100] + "..."
+                                                                : feedback.Message)
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm"
+                                        value="@feedback.Status"
+                                        @onchange="(e) => OnStatusChanged(e, feedback)">
+                                    @foreach (var status in Enum.GetValues<FeedbackStatus>())
+                                            {
+                                                <option value="@status">@status</option>
+                                            }
+                                        </select>
+                                        <button class="btn btn-sm btn-success"
+                                                @onclick="() => UpdateStatus(feedback)">
+                                            Save
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" @onclick="() => ShowResponseDialog(feedback)">
+                                        Respond
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteFeedback(feedback)">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@if (selectedFeedback != null)
+{
+    <div class="modal fade show" style="display:block;" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Feedback Details & Response</h5>
+                    <button type="button" class="btn-close" @onclick="CloseResponseDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>User:</strong> @selectedFeedback.User?.FullName (@selectedFeedback.User?.Email)<br />
+                        <strong>Type:</strong> @selectedFeedback.Type<br />
+                        <strong>Status:</strong> @selectedFeedback.Status<br />
+                        <strong>Date:</strong> @selectedFeedback.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Original Feedback:</label>
+                        <p class="border rounded p-3 bg-light">@selectedFeedback.Message</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Your Response:</label>
+                        <textarea class="form-control" rows="4"
+                                  @bind="responseMessage" placeholder="Type your response..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseResponseDialog">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SendResponse">Send Response</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    </div>
+}
+
+@code {
+    private List<Feedback> feedbackList = new();
+    private List<Feedback> filteredFeedback = new();
+    private bool isLoading = true;
+    private string _searchTerm = "";
+    private string _selectedType = "";
+    private string _selectedStatus = "";
+    private Feedback? selectedFeedback;
+    private string responseMessage = "";
+
+    private string SearchTerm
+    {
+        get => _searchTerm;
+        set { _searchTerm = value; FilterFeedback(); }
+    }
+
+    private string SelectedType
+    {
+        get => _selectedType;
+        set { _selectedType = value; FilterFeedback(); }
+    }
+
+    private string SelectedStatus
+    {
+        get => _selectedStatus;
+        set { _selectedStatus = value; FilterFeedback(); }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFeedback();
+    }
+
+    private async Task LoadFeedback()
+    {
+        isLoading = true;
+        try
+        {
+            feedbackList = await DbContext.Feedbacks
+                .Include(f => f.User)
+                .OrderByDescending(f => f.CreatedAt)
+                .ToListAsync();
+
+            FilterFeedback();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterFeedback()
+    {
+        filteredFeedback = feedbackList.Where(f =>
+            (string.IsNullOrWhiteSpace(SearchTerm) ||
+             f.Message.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+             f.User?.Email?.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+             f.User?.FullName?.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) == true) &&
+            (string.IsNullOrWhiteSpace(SelectedType) || f.Type.ToString() == SelectedType) &&
+            (string.IsNullOrWhiteSpace(SelectedStatus) || f.Status.ToString() == SelectedStatus)
+        ).ToList();
+    }
+
+    private string GetTypeBadgeClass(FeedbackType type) => type switch
+    {
+        FeedbackType.Service => "bg-primary",
+        FeedbackType.Appointment => "bg-info",
+        FeedbackType.General => "bg-secondary",
+        _ => "bg-secondary"
+    };
+
+    private void OnStatusChanged(ChangeEventArgs e, Feedback feedback)
+    {
+        if (Enum.TryParse<FeedbackStatus>(e.Value?.ToString(), out var newStatus))
+        {
+            feedback.Status = newStatus;
+        }
+    }
+
+    private async Task UpdateStatus(Feedback feedback)
+    {
+        try
+        {
+            DbContext.Feedbacks.Update(feedback);
+            await DbContext.SaveChangesAsync();
+            await JSRuntime.InvokeVoidAsync("alert", "Status updated successfully.");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+    }
+
+    private void ShowResponseDialog(Feedback feedback)
+    {
+        selectedFeedback = feedback;
+        responseMessage = "";
+    }
+
+    private void CloseResponseDialog()
+    {
+        selectedFeedback = null;
+        responseMessage = "";
+    }
+
+    private async Task SendResponse()
+    {
+        if (selectedFeedback == null || string.IsNullOrWhiteSpace(responseMessage))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please enter a response.");
+            return;
+        }
+
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Send this response?");
+        if (!confirm) return;
+
+        try
+        {
+            // Simulate sending email
+            Console.WriteLine($"[Email to {selectedFeedback.User?.Email}] {responseMessage}");
+            selectedFeedback.Status = FeedbackStatus.Reviewed;
+            await DbContext.SaveChangesAsync();
+
+            await JSRuntime.InvokeVoidAsync("alert", "Response sent.");
+            CloseResponseDialog();
+            await LoadFeedback();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Failed: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteFeedback(Feedback feedback)
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure?");
+        if (!confirmed) return;
+
+        try
+        {
+            DbContext.Feedbacks.Remove(feedback);
+            await DbContext.SaveChangesAsync();
+            await LoadFeedback();
+            await JSRuntime.InvokeVoidAsync("alert", "Feedback deleted.");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error deleting: {ex.Message}");
+        }
+    }
+}
