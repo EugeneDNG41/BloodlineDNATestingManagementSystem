@@ -208,5 +208,6 @@ else
         {
             reviews = await ReviewService.GetReviewsForServiceAsync(service.Id);
         }
+        StateHasChanged();
     }
 }

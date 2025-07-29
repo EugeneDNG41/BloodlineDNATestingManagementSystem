@@ -1,4 +1,5 @@
 @page "/manager/services"
+@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Components
 @using Data.Entities
 @inject IJSRuntime JSRuntime
@@ -22,9 +23,9 @@
                 </div>
                 <div class="col-md-6">
                     <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search services..." @bind="searchTerm" @oninput="FilterServices">
-                        <button class="btn btn-outline-secondary" type="button">
-                            <i class="fas fa-search"></i>
+                        <input type="text" class="form-control" placeholder="Search services..." value="@searchTerm" @oninput="OnSearchInput">
+                        <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
@@ -124,18 +125,60 @@
 
     private void FilterServices()
     {
-        filteredServices = services.Where(s =>
-            (string.IsNullOrEmpty(searchTerm) || s.ServiceName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-             s.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-             s.Duration.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-        ).ToList();
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            // Nếu search term rỗng, hiển thị tất cả services
+            filteredServices = services.ToList();
+        }
+        else
+        {
+            // Nếu có search term, lọc theo điều kiện
+            filteredServices = services.Where(s =>
+                s.ServiceName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                s.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                s.Duration.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+        
+        // Debug log
+        Console.WriteLine($"Search term: '{searchTerm}'");
+        Console.WriteLine($"Total services: {services.Count}");
+        Console.WriteLine($"Filtered services: {filteredServices.Count}");
+        
+        StateHasChanged();
     }
 
     private async Task DeleteService(int id)
     {
-        // TODO: Implement delete logic
-        services = services.Where(s => s.Id != id).ToList();
+        try
+        {
+            var success = await ServiceService.DeleteAsync(id);
+            if (success)
+            {
+                // Refresh danh sách services
+                await LoadServices();
+                await JSRuntime.InvokeVoidAsync("alert", "Service deleted successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to delete service!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error deleting service: {ex.Message}");
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
         FilterServices();
-        await JSRuntime.InvokeVoidAsync("alert", "Service deleted (mock)");
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        FilterServices();
     }
 } 

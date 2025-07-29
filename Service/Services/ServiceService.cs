@@ -3,6 +3,7 @@ using Repositories.UnitOfWork;
 using Services.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Services.Services
 {
@@ -16,7 +17,11 @@ namespace Services.Services
 
         public async Task<List<Service>> GetAllAsync()
         {
-            return await _unitOfWork.Repository<Service>().GetAllAsync();
+            return await _unitOfWork.Repository<Service>()
+                .AsQueryable()
+                .Include(s => s.Reviews)
+                .Where(s => !s.IsDeleted)
+                .ToListAsync();
         }
 
         public async Task<Service?> GetByIdAsync(int id)
