@@ -1,8 +1,9 @@
 ﻿@page "/services"
+@rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components
 @using Data.Entities
-@inject Data.AppDbContext DbContext
+@inject global::Services.Interfaces.IServiceService ServiceService
 @inject IJSRuntime JSRuntime
 
 <PageTitle>DNA Testing Services</PageTitle>
@@ -13,7 +14,6 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="display-4 text-primary">Our DNA Testing Services</h1>
                 <div class="input-group" style="max-width: 300px;">
-                    <input type="text" class="form-control" placeholder="Search services..." @bind="searchTerm" @oninput="FilterServices">
                     <button class="btn btn-outline-primary" type="button">
                         <i class="fas fa-search"></i>
                     </button>
@@ -31,7 +31,7 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Price Range</label>
-                        <select class="form-select" @bind="SelectedPriceRange">
+                        <select class="form-select" @bind="selectedPriceRange" @bind:after="ApplyFilters">
                             <option value="">All Prices</option>
                             <option value="0-100">$0 - $100</option>
                             <option value="100-300">$100 - $300</option>
@@ -41,7 +41,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Duration</label>
-                        <select class="form-select" @bind="SelectedDuration">
+                        <select class="form-select" @bind="selectedDuration" @bind:after="ApplyFilters">
                             <option value="">All Durations</option>
                             <option value="1-2 weeks">1-2 weeks</option>
                             <option value="3-4 weeks">3-4 weeks</option>
@@ -65,11 +65,11 @@
                                         <h5 class="card-title text-primary">@service.ServiceName</h5>
                                         <span class="badge bg-success fs-6">$@service.Price.ToString("F2")</span>
                                     </div>
-                                    
+
                                     <p class="card-text text-muted flex-grow-1">
                                         @(service.Description.Length > 120 ? service.Description.Substring(0, 120) + "..." : service.Description)
                                     </p>
-                                    
+
                                     <div class="mb-3">
                                         <small class="text-muted">
                                             <i class="fas fa-clock me-1"></i>
@@ -109,37 +109,17 @@
     .service-card {
         transition: transform 0.2s ease-in-out;
     }
-    
-    .service-card:hover {
-        transform: translateY(-5px);
-    }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+        }
 </style>
 
 @code {
     private List<Service> services = new();
     private List<Service> filteredServices = new();
-    private string searchTerm = "";
     private string selectedPriceRange = "";
-    public string SelectedPriceRange
-    {
-        get => selectedPriceRange;
-        set
-        {
-            selectedPriceRange = value;
-            FilterServices();
-        }
-    }
-
     private string selectedDuration = "";
-    public string SelectedDuration
-    {
-        get => selectedDuration;
-        set
-        {
-            selectedDuration = value;
-            FilterServices();
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -150,28 +130,29 @@
 
     private async Task LoadServices()
     {
-        // Replace with actual service call
-        services = await DbContext.Services
-            .Include(s => s.Reviews)
-            .Where(a => !a.IsDeleted)
-            .ToListAsync();
-        // services = new List<Service>
-        // {
-        //     new Service { Id = 1, ServiceName = "Basic Ancestry DNA", Description = "Discover your ethnic background and find DNA matches with our basic ancestry test. Get insights into your family history and genetic heritage.", Price = 99.99m, Duration = "2-3 weeks" },
-        //     new Service { Id = 2, ServiceName = "Advanced Bloodline Analysis", Description = "Comprehensive bloodline analysis including detailed family tree construction and advanced genetic markers.", Price = 299.99m, Duration = "4-6 weeks" },
-        //     new Service { Id = 3, ServiceName = "Paternity Testing", Description = "Accurate paternity testing with 99.9% accuracy. Confidential and legally admissible results.", Price = 199.99m, Duration = "1-2 weeks" },
-        //     new Service { Id = 4, ServiceName = "Health + Ancestry", Description = "Complete package including ancestry information plus health predispositions and carrier status reports.", Price = 499.99m, Duration = "3-4 weeks" }
-        // };
+        services = await ServiceService.GetAllAsync();
     }
 
     private void FilterServices()
     {
-        filteredServices = services.Where(s => 
-            (string.IsNullOrEmpty(searchTerm) || s.ServiceName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || 
-             s.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+        var originalCount = services.Count;
+        filteredServices = services.Where(s =>
             (string.IsNullOrEmpty(selectedPriceRange) || IsInPriceRange(s.Price, selectedPriceRange)) &&
-            (string.IsNullOrEmpty(selectedDuration) || s.Duration.Contains(selectedDuration, StringComparison.OrdinalIgnoreCase))
+            (string.IsNullOrEmpty(selectedDuration) || IsInDurationRange(s.Duration, selectedDuration))
         ).ToList();
+
+        // Debug: Log filter results
+        Console.WriteLine($"Original services: {originalCount}");
+        Console.WriteLine($"Filtered services: {filteredServices.Count}");
+        Console.WriteLine($"Price Range: '{selectedPriceRange}'");
+        Console.WriteLine($"Duration: '{selectedDuration}'");
+
+        foreach (var service in filteredServices)
+        {
+            Console.WriteLine($"Service: {service.ServiceName}, Price: {service.Price}, Duration: {service.Duration}");
+        }
+
+        StateHasChanged(); // Force UI update
     }
 
     private bool IsInPriceRange(decimal price, string range)
@@ -184,5 +165,38 @@
             "500+" => price > 500,
             _ => true
         };
+    }
+
+    private bool IsInDurationRange(string serviceDuration, string selectedDuration)
+    {
+        if (string.IsNullOrEmpty(selectedDuration) || string.IsNullOrEmpty(serviceDuration))
+            return string.IsNullOrEmpty(selectedDuration);
+
+        var normalizedServiceDuration = serviceDuration.ToLowerInvariant().Trim();
+        var normalizedSelectedDuration = selectedDuration.ToLowerInvariant().Trim();
+
+        Console.WriteLine($"Comparing duration: '{normalizedServiceDuration}' with filter: '{normalizedSelectedDuration}'");
+
+        return selectedDuration switch
+        {
+            "1-2 weeks" => normalizedServiceDuration.Contains("1-2") && normalizedServiceDuration.Contains("week"),
+            "3-4 weeks" => normalizedServiceDuration.Contains("3-4") && normalizedServiceDuration.Contains("week") ||
+                          normalizedServiceDuration.Contains("4-6") && normalizedServiceDuration.Contains("week"),
+            "1-2 months" => normalizedServiceDuration.Contains("month") &&
+                           (normalizedServiceDuration.Contains("1-2") || normalizedServiceDuration.Contains("1") || normalizedServiceDuration.Contains("2")),
+            _ => normalizedServiceDuration.Contains(normalizedSelectedDuration)
+        };
+    }
+
+    private void ApplyFilters()
+    {
+        FilterServices();
+    }
+
+    private void ClearFilters()
+    {
+        selectedPriceRange = "";
+        selectedDuration = "";
+        FilterServices();
     }
 }
