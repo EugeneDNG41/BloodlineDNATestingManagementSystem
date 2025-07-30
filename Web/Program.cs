@@ -48,13 +48,13 @@ namespace Web
             })
                 .AddIdentityCookies();
 
-            //builder.Services.AddDbContext<AppDbContext>(options =>
-            //     options.UseMySql(builder.Configuration.GetConnectionString("MySQLConnection"),
-            //     new MySqlServerVersion(new Version(8, 0, 37))));
             builder.Services.AddDbContext<AppDbContext>(options =>
-            {
-                options.UseSqlServer(builder.Configuration.GetConnectionString("MSSQLConnection"));
-            });
+                 options.UseMySql(builder.Configuration.GetConnectionString("MySQLConnection"),
+                 new MySqlServerVersion(new Version(8, 0, 37))));
+            //builder.Services.AddDbContext<AppDbContext>(options =>
+            //{
+            //    options.UseSqlServer(builder.Configuration.GetConnectionString("MSSQLConnection"));
+            //});
 
             builder.Services.AddQuickGridEntityFrameworkAdapter();
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -75,7 +75,7 @@ namespace Web
             builder.Services.AddSingleton<ISmtpClient, SmtpClient>();
             builder.Services.Configure<MailConfiguration>(builder.Configuration.GetSection("MailConfiguration"));
             builder.Services.AddSingleton<IEmailSender<User>, EmailSender>();
-            await builder.Services.InitializeAsync();
+            //await builder.Services.InitializeAsync();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -84,9 +84,9 @@ namespace Web
                 app.UseExceptionHandler("/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
-            app.UseMigrationsEndPoint();
+                app.UseMigrationsEndPoint();
             }
-
+            app.MapAdditionalIdentityEndpoints();
             app.UseHttpsRedirection();
 
             app.UseStaticFiles();

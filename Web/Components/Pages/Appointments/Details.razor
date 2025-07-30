@@ -58,7 +58,7 @@
                             <div class="bg-light p-3 rounded">
                                 <p class="mb-1"><strong>@appointment.Address.Street</strong></p>
                                 <p class="mb-0 text-muted">
-                                    @appointment.Address.City, @appointment.Address.ZipCode
+                                    @appointment.Address.Ward, @appointment.Address.District, @appointment.Address.Province, @appointment.Address.ZipCode
                                 </p>
                                 @if (!string.IsNullOrEmpty(appointment.Address.Notes))
                                 {
