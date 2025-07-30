@@ -1,12 +1,11 @@
 @page "/results"
-@using Microsoft.EntityFrameworkCore
 @using Data.Entities
 @using Data.Enum
-@using Microsoft.AspNetCore.Authorization
-@using System.Security.Claims;
 @using Web.Components.Account
+@using Microsoft.AspNetCore.Authorization
+@using global::Services.Interfaces
 @inject IdentityUserAccessor UserAccessor
-@inject Data.AppDbContext DbContext
+@inject IResultService ResultService
 @attribute [Authorize(Roles = "Customer")]
 
 <PageTitle>My Test Results</PageTitle>
@@ -14,21 +13,16 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h2">My Test Results</h1>
-        <div class="d-flex gap-2">
-            <select class="form-select" @bind="SelectedAnalysisType" style="width: auto;">
-                <option value="">All Types</option>
-                @foreach (var type in Enum.GetValues<AnalysisType>())
-                {
-                    <option value="@type">@FormatAnalysisType(type)</option>
-                }
-            </select>
-        </div>
     </div>
 
-    @if (filteredResults?.Any() == true)
+    @if (results is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (results.Any())
     {
         <div class="row">
-            @foreach (var result in filteredResults)
+            @foreach (var result in results)
             {
                 <div class="col-lg-6 mb-4">
                     <div class="card shadow-sm h-100">
@@ -37,39 +31,19 @@
                                 <div>
                                     <h5 class="card-title text-primary">@result.Summary</h5>
                                     <span class="badge @GetAnalysisTypeBadgeClass(result.Type)">
-                                        @FormatAnalysisType(result.Type)
+                                        @result.Type
                                     </span>
                                 </div>
                                 <small class="text-muted">@result.CreatedAt.ToString("MMM dd, yyyy")</small>
                             </div>
-                            
-                            <div class="mb-3">
-                                <p class="text-muted">
-                                    <strong>Service:</strong> @result.Service.ServiceName
-                                </p>
-                                @if (!string.IsNullOrEmpty(result.Notes))
-                                {
-                                    <p class="text-muted small">
-                                        @(result.Notes.Length > 100 ? result.Notes.Substring(0, 100) + "..." : result.Notes)
-                                    </p>
-                                }
-                            </div>
 
-                            <div class="mb-3">
-                                <small class="text-muted">
-                                    <i class="fas fa-vial me-1"></i>
-                                    @result.Samples.Count sample(s) analyzed
-                                </small>
-                            </div>
+                            <p class="text-muted">
+                                <strong>Service:</strong> @result.Service.ServiceName
+                            </p>
 
-                            <div class="d-flex gap-2">
-                                <a href="/results/@result.Id" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-eye me-1"></i>View Full Report
-                                </a>
-                                <button class="btn btn-outline-secondary btn-sm">
-                                    <i class="fas fa-download me-1"></i>Download PDF
-                                </button>
-                            </div>
+                            <a href="/results/@result.Id" class="btn btn-primary mt-auto">
+                                <i class="fas fa-eye me-1"></i>View Full Report
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -81,79 +55,33 @@
         <div class="text-center py-5">
             <i class="fas fa-file-medical fa-3x text-muted mb-3"></i>
             <h4 class="text-muted">No results available</h4>
-            <p class="text-muted">Your test results will appear here once processing is complete</p>
+            <p class="text-muted">Your test results will appear here once processing is complete.</p>
             <a href="/appointments" class="btn btn-primary">View My Appointments</a>
         </div>
     }
 </div>
 
 @code {
-    private User user = default!;
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
+    private User user = default!;
     private List<Result> results = new();
-    private List<Result> filteredResults = new();
-    private string selectedAnalysisType = "";
-    public string SelectedAnalysisType
-    {
-        get => selectedAnalysisType;
-        set
-        {
-            if (selectedAnalysisType != value)
-            {
-                selectedAnalysisType = value;
-                FilterResults();
-            }
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        await LoadResults();
-        filteredResults = results.ToList();
-    }
-
-    private async Task LoadResults()
-    {
-        results = await DbContext.Results
-            .Include(r => r.Service)
-            .Include(r => r.Samples)
-            .Where(r => r.UserId == user.Id && !r.IsDeleted) // Replace with actual user ID
-            .OrderByDescending(r => r.CreatedAt)
-            .ToListAsync();
-    }
-
-    private void FilterResults()
-    {
-        filteredResults = results.Where(r =>
-            string.IsNullOrEmpty(selectedAnalysisType) || r.Type.ToString() == selectedAnalysisType
-        ).ToList();
-    }
-
-    private string FormatAnalysisType(AnalysisType type)
-    {
-        return type switch
+        var resultList = await ResultService.GetResultsByUserIdAsync(user.Id);
+        if (resultList is not null)
         {
-            AnalysisType.YChromosome => "Y-Chromosome",
-            AnalysisType.MitochondrialDNA => "Mitochondrial DNA",
-            AnalysisType.TwinZygosity => "Twin Zygosity",
-            AnalysisType.HaplogroupDetermination => "Haplogroup Determination",
-            AnalysisType.CourtAdmissiblePaternity => "Court Admissible Paternity",
-            AnalysisType.UnknownSampleIdentification => "Unknown Sample ID",
-            _ => type.ToString()
-        };
+            results = resultList.ToList();
+        }
     }
 
-    private string GetAnalysisTypeBadgeClass(AnalysisType type)
+    private string GetAnalysisTypeBadgeClass(AnalysisType type) => type switch
     {
-        return type switch
-        {
-            AnalysisType.Paternity or AnalysisType.Maternity or AnalysisType.Sibling => "bg-primary",
-            AnalysisType.EthnicityEstimate or AnalysisType.AncestryComposition => "bg-success",
-            AnalysisType.CarrierStatus or AnalysisType.GeneticHealthRisk => "bg-warning",
-            AnalysisType.ImmigrationDNA or AnalysisType.CourtAdmissiblePaternity => "bg-info",
-            _ => "bg-secondary"
-        };
-    }
+        AnalysisType.Paternity or AnalysisType.Maternity => "bg-primary",
+        AnalysisType.EthnicityEstimate => "bg-success",
+        AnalysisType.GeneticHealthRisk => "bg-warning",
+        _ => "bg-secondary"
+    };
 }

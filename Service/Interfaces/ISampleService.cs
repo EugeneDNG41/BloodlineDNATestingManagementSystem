@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Data.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +9,7 @@ namespace Services.Interfaces
 {
     public interface ISampleService
     {
+        Task<IEnumerable<Sample>> GetSamplesByDonorIdAsync(string donorId);
+        Task<Sample?> GetSampleDetailsAsync(int sampleId, string donorId);
     }
 }

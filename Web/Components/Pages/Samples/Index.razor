@@ -5,8 +5,9 @@
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims;
 @using Web.Components.Account
+@using global::Services.Interfaces
 @inject IdentityUserAccessor UserAccessor
-@inject Data.AppDbContext DbContext
+@inject ISampleService SampleService
 @attribute [Authorize(Roles = "Customer")]
 
 <PageTitle>Sample Tracking</PageTitle>
@@ -14,63 +15,13 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h2">Sample Tracking</h1>
-        <div class="d-flex gap-2">
-            <select class="form-select" @bind="SelectedStatus" style="width: auto;">
-                <option value="">All Status</option>
-                @foreach (var status in Enum.GetValues<SampleStatus>())
-                {
-                    <option value="@status">@status</option>
-                }
-            </select>
-            <input type="text" class="form-control" placeholder="Search samples..." @bind="searchTerm" @oninput="FilterSamples" style="width: 250px;">
-        </div>
     </div>
 
-    <!-- Status Overview Cards -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center">
-                    <h4>@samples.Count(s => s.Status == SampleStatus.Collected)</h4>
-                    <small>Collected</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h4>@samples.Count(s => s.Status == SampleStatus.Received)</h4>
-                    <small>Received</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-warning text-white">
-                <div class="card-body text-center">
-                    <h4>@samples.Count(s => s.Status == SampleStatus.Processing)</h4>
-                    <small>Processing</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h4>@samples.Count(s => s.Status == SampleStatus.Completed)</h4>
-                    <small>Completed</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-danger text-white">
-                <div class="card-body text-center">
-                    <h4>@samples.Count(s => s.Status == SampleStatus.Rejected)</h4>
-                    <small>Rejected</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @if (filteredSamples?.Any() == true)
+    @if (samples is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (samples.Any())
     {
         <div class="card shadow-sm">
             <div class="card-body p-0">
@@ -80,38 +31,19 @@
                             <tr>
                                 <th>Sample ID</th>
                                 <th>Type</th>
-                                <th>Collection Method</th>
                                 <th>Collection Date</th>
-                                <th>Received Date</th>
                                 <th>Status</th>
                                 <th>Progress</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var sample in filteredSamples)
+                            @foreach (var sample in samples)
                             {
                                 <tr>
-                                    <td>
-                                        <strong>@sample.Id.ToString("D6")</strong>
-                                    </td>
-                                    <td>
-                                        <span class="badge @GetSampleTypeBadgeClass(sample.Type)">
-                                            @sample.Type
-                                        </span>
-                                    </td>
-                                    <td>@sample.CollectionMethod</td>
+                                    <td><strong>@sample.Id.ToString("D6")</strong></td>
+                                    <td>@sample.Type</td>
                                     <td>@sample.CollectionDate.ToString("MMM dd, yyyy")</td>
-                                    <td>
-                                        @if (sample.ReceivedDate.HasValue)
-                                        {
-                                            @sample.ReceivedDate.Value.ToString("MMM dd, yyyy")
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">-</span>
-                                        }
-                                    </td>
                                     <td>
                                         <span class="badge @GetSampleStatusBadgeClass(sample.Status)">
                                             @sample.Status
@@ -119,14 +51,14 @@
                                     </td>
                                     <td>
                                         <div class="progress" style="height: 8px;">
-                                            <div class="progress-bar @GetProgressBarClass(sample.Status)" 
+                                            <div class="progress-bar @GetProgressBarClass(sample.Status)"
                                                  style="width: @GetProgressPercentage(sample.Status)%"></div>
                                         </div>
                                         <small class="text-muted">@GetProgressPercentage(sample.Status)%</small>
                                     </td>
                                     <td>
                                         <a href="/samples/@sample.Id" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-eye"></i>
+                                            <i class="fas fa-eye"></i> View
                                         </a>
                                     </td>
                                 </tr>
@@ -142,106 +74,50 @@
         <div class="text-center py-5">
             <i class="fas fa-vial fa-3x text-muted mb-3"></i>
             <h4 class="text-muted">No samples found</h4>
-            <p class="text-muted">Your DNA samples will appear here once collected</p>
+            <p class="text-muted">Your DNA samples will appear here once collected.</p>
         </div>
     }
 </div>
 
 @code {
-    private User user = default!;
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
+    private User user = default!;
     private List<Sample> samples = new();
-    private List<Sample> filteredSamples = new();
-    private string searchTerm = "";
-    private string selectedStatus = "";
-    public string SelectedStatus
-    {
-        get => selectedStatus;
-        set
-        {
-            if (selectedStatus != value)
-            {
-                selectedStatus = value;
-                FilterSamples();
-            }
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        await LoadSamples();
-        filteredSamples = samples.ToList();
-    }
-
-    private async Task LoadSamples()
-    {
-        samples = await DbContext.Samples
-            .Where(s => s.DonorId == user.Id && !s.IsDeleted)
-            .OrderByDescending(s => s.CollectionDate)
-            .ToListAsync();
-    }
-
-    private void FilterSamples()
-    {
-        filteredSamples = samples.Where(s =>
-            (string.IsNullOrEmpty(selectedStatus) || s.Status.ToString() == selectedStatus) &&
-            (string.IsNullOrEmpty(searchTerm) || 
-             s.Id.ToString().Contains(searchTerm) ||
-             s.Type.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-             s.CollectionMethod.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-        ).ToList();
-    }
-
-    private string GetSampleStatusBadgeClass(SampleStatus status)
-    {
-        return status switch
+        var sampleList = await SampleService.GetSamplesByDonorIdAsync(user.Id);
+        if (sampleList != null)
         {
-            SampleStatus.Collected => "bg-info",
-            SampleStatus.Received => "bg-primary",
-            SampleStatus.Processing => "bg-warning",
-            SampleStatus.Completed => "bg-success",
-            SampleStatus.Rejected => "bg-danger",
-            _ => "bg-secondary"
-        };
+            samples = sampleList.ToList();
+        }
     }
 
-    private string GetSampleTypeBadgeClass(SampleType type)
+    private string GetSampleStatusBadgeClass(SampleStatus status) => status switch
     {
-        return type switch
-        {
-            SampleType.Blood => "bg-danger",
-            SampleType.Saliva => "bg-info",
-            SampleType.Tissue => "bg-warning",
-            SampleType.Urine => "bg-secondary",
-            _ => "bg-primary"
-        };
-    }
+        SampleStatus.Collected => "bg-info text-dark",
+        SampleStatus.Received => "bg-primary",
+        SampleStatus.Processing => "bg-warning text-dark",
+        SampleStatus.Completed => "bg-success",
+        SampleStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
 
-    private string GetProgressBarClass(SampleStatus status)
+    private string GetProgressBarClass(SampleStatus status) => status switch
     {
-        return status switch
-        {
-            SampleStatus.Collected => "bg-info",
-            SampleStatus.Received => "bg-primary",
-            SampleStatus.Processing => "bg-warning",
-            SampleStatus.Completed => "bg-success",
-            SampleStatus.Rejected => "bg-danger",
-            _ => "bg-secondary"
-        };
-    }
+        SampleStatus.Completed => "bg-success",
+        SampleStatus.Rejected => "bg-danger",
+        _ => "bg-primary"
+    };
 
-    private int GetProgressPercentage(SampleStatus status)
+    private int GetProgressPercentage(SampleStatus status) => status switch
     {
-        return status switch
-        {
-            SampleStatus.Collected => 20,
-            SampleStatus.Received => 40,
-            SampleStatus.Processing => 70,
-            SampleStatus.Completed => 100,
-            SampleStatus.Rejected => 0,
-            _ => 0
-        };
-    }
+        SampleStatus.Collected => 25,
+        SampleStatus.Received => 50,
+        SampleStatus.Processing => 75,
+        SampleStatus.Completed => 100,
+        _ => 0
+    };
 }

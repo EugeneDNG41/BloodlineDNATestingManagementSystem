@@ -15,10 +15,14 @@ namespace Data.Entities
         public DateTime CollectionDate { get; set; }
         public DateTime? ReceivedDate { get; set; }         
         public string Notes { get; set; }
-        public string CollectorId { get; set; }
+        public string CollectorId { get; set; } //ID nhân viên thu thập
         public virtual User Collector { get; set; }
-        public string DonorId { get; set; }
+        public string DonorId { get; set; } //ID khách hàng hiến mẫu
         public virtual User Donor { get; set; }
+
+        // Quan hệ với Result
+        public int? ResultId { get; set; }
+        public virtual Result Result { get; set; }
     }
     
 }
