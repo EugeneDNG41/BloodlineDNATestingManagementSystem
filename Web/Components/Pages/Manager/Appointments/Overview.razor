@@ -1,0 +1,117 @@
+﻿@page "/manager/appointments"
+@using Data.Enum
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@inject Data.AppDbContext DbContext
+@attribute [Authorize(Roles = "Admin,Manager")]
+
+<PageTitle>Appointments Overview</PageTitle>
+
+<h3 class="mb-4">📅 Appointments Overview</h3>
+
+@if (loading)
+{
+    <p>Loading data...</p>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary shadow rounded-4 p-3">
+                <h5 class="fw-bold">Today's Appointments</h5>
+                <p class="display-6">@todayCount</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-success shadow rounded-4 p-3">
+                <h5 class="fw-bold">Completed</h5>
+                <p class="display-6">@completedCount</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-warning shadow rounded-4 p-3">
+                <h5 class="fw-bold">Scheduled</h5>
+                <p class="display-6">@scheduledCount</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-danger shadow rounded-4 p-3">
+                <h5 class="fw-bold">No-Show</h5>
+                <p class="display-6">@noShowCount</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <h5 class="mb-3">🔍 Recent Appointments</h5>
+        <table class="table table-bordered table-striped table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Customer</th>
+                    <th>Service</th>
+                    <th>Scheduled At</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var appt in recentAppointments)
+                {
+                    <tr>
+                        <td>@appt.User?.FullName</td>
+                        <td>@appt.Service?.ServiceName</td>
+                        <td>@appt.ScheduledAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            <span class="badge bg-@GetStatusColor(appt.Status)">
+                                @appt.Status
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div>
+        <a class="btn btn-dark me-2" href="admin/appointments">View All</a>
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private int todayCount = 0;
+    private int completedCount = 0;
+    private int scheduledCount = 0;
+    private int noShowCount = 0;
+
+    private List<Data.Entities.Appointment> recentAppointments = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateTime.Today;
+        var tomorrow = today.AddDays(1);
+
+        todayCount = await DbContext.Appointments.CountAsync(a =>
+            a.ScheduledAt >= today && a.ScheduledAt < tomorrow);
+
+        completedCount = await DbContext.Appointments.CountAsync(a => a.Status == AppointmentStatus.Completed);
+        scheduledCount = await DbContext.Appointments.CountAsync(a => a.Status == AppointmentStatus.Scheduled);
+        noShowCount = await DbContext.Appointments.CountAsync(a => a.Status == AppointmentStatus.NoShow);
+
+        recentAppointments = await DbContext.Appointments
+            .Include(a => a.Service)
+            .Include(a => a.User)
+            .OrderByDescending(a => a.ScheduledAt)
+            .ToListAsync();
+
+        loading = false;
+    }
+
+    private string GetStatusColor(AppointmentStatus status) => status switch
+    {
+        AppointmentStatus.Scheduled => "warning",
+        AppointmentStatus.Completed => "success",
+        AppointmentStatus.Cancelled => "danger",
+        AppointmentStatus.NoShow => "secondary",
+        _ => "light"
+    };
+}
