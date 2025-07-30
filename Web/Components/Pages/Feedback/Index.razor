@@ -1,4 +1,4 @@
-@page "/feedback"
+@page "/feedback/index"
 @using Microsoft.EntityFrameworkCore
 @using Data.Entities
 @using Data.Enum
@@ -7,7 +7,7 @@
 @using Web.Components.Account
 @inject IdentityUserAccessor UserAccessor
 @inject Data.AppDbContext DbContext
-@attribute [Authorize(Roles = "Customer")]
+@attribute [Authorize(Roles = "Customer,Admin")]
 
 <PageTitle>My Feedback</PageTitle>
 

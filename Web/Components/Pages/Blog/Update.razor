@@ -1,0 +1,135 @@
+﻿@page "/blog/update/{Id:int}"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Data.Entities
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using global::Services.Interfaces
+
+@attribute [Authorize(Roles = "Admin")]
+@inject IPostService PostService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Update Blog Post</PageTitle>
+
+<div class="container py-4">
+    <h1>Update Blog Post</h1>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+        <button class="btn btn-secondary" @onclick="NavigateBack">Back to Blog</button>
+    }
+    else if (post == null)
+    {
+        <div class="alert alert-info">Loading...</div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <EditForm Model="@Input" OnValidSubmit="UpdatePostAsync">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title</label>
+                                <InputText id="title" class="form-control" @bind-Value="Input.Title" />
+                                <ValidationMessage For="@(() => Input.Title)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Content</label>
+                                <InputTextArea id="content" class="form-control" rows="10"
+                                               @bind-Value="Input.Content" />
+                                <ValidationMessage For="@(() => Input.Content)" class="text-danger" />
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Update Post
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="NavigateBack">
+                                    <i class="fas fa-times me-2"></i>Cancel
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Post? post;
+    private string? errorMessage;
+    private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            post = await PostService.GetPostByIdAsync(Id);
+            if (post != null)
+            {
+                Input.Title = post.Title;
+                Input.Content = post.Content;
+            }
+            else
+            {
+                errorMessage = "Post not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading post: {ex.Message}";
+        }
+    }
+
+    private async Task UpdatePostAsync()
+    {
+        try
+        {
+            if (post == null) return;
+
+            post.Title = Input.Title;
+            post.Content = Input.Content;
+
+            var updatedPost = await PostService.UpdatePostAsync(post);
+            if (updatedPost != null)
+            {
+                NavigationManager.NavigateTo($"/blog/detail/{Id}");
+            }
+            else
+            {
+                errorMessage = "Failed to update post.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating post: {ex.Message}";
+        }
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/blog");
+    }
+
+    public class InputModel
+    {
+        [Required(ErrorMessage = "Title is required")]
+        [StringLength(100, MinimumLength = 5, ErrorMessage = "Title must be between {2} and {1} characters")]
+        public string Title { get; set; } = "";
+
+        [Required(ErrorMessage = "Content is required")]
+        [MinLength(50, ErrorMessage = "Content must be at least {1} characters")]
+        public string Content { get; set; } = "";
+    }
+}

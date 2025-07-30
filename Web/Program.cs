@@ -1,4 +1,4 @@
-using Data;
+﻿using Data;
 using Data.Entities;
 using MailKit.Net.Smtp;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -35,12 +35,12 @@ namespace Web
             builder.Services.AddScoped<ISampleService, SampleService>();
             builder.Services.AddScoped<IServiceService, ServiceService>();
             builder.Services.AddScoped<IUserService, UserService>();
-            
+
             builder.Services.AddCascadingAuthenticationState();
             builder.Services.AddScoped<IdentityUserAccessor>();
             builder.Services.AddScoped<IdentityRedirectManager>();
             builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-            
+
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -59,7 +59,7 @@ namespace Web
             builder.Services.AddQuickGridEntityFrameworkAdapter();
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            
+
             builder.Services.AddIdentityCore<User>(opt =>
             {
                 opt.Password.RequireDigit = false;
@@ -84,7 +84,7 @@ namespace Web
                 app.UseExceptionHandler("/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
-            app.UseMigrationsEndPoint();
+                app.UseMigrationsEndPoint();
             }
 
             app.UseHttpsRedirection();
