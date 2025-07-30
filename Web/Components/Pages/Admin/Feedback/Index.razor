@@ -68,8 +68,8 @@
                                 <td>@feedback.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
                                 <td>
                                     <div>
-                                        <div class="fw-semibold">@feedback.User?.FullName ?? "Unknown"</div>
-                                        <small class="text-muted">@feedback.User?.Email ?? "N/A"</small>
+                                        <div class="fw-semibold">@feedback.User?.FullName </div>
+                                        <small class="text-muted">@feedback.User?.Email </small>
                                     </div>
                                 </td>
                                 <td>
@@ -99,9 +99,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-primary" @onclick="() => ShowResponseDialog(feedback)">
-                                        Respond
-                                    </button>
+                                   
                                     <button class="btn btn-sm btn-danger" @onclick="() => DeleteFeedback(feedback)">
                                         Delete
                                     </button>

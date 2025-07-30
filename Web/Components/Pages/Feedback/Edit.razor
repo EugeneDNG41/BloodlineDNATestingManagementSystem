@@ -1,0 +1,78 @@
+﻿@rendermode InteractiveServer
+@page "/feedback/edit/{Id:int}"
+@using Data.Entities
+@using Data.Enum
+@using global::Services.Interfaces
+@inject IFeedbackService FeedbackService
+@inject NavigationManager NavigationManager
+
+<div class="container mt-4">
+    @if (feedback == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h3>Edit Feedback</h3>
+            </div>
+            <div class="card-body">
+                <EditForm Model="feedback" OnValidSubmit="HandleValidSubmit" FormName="EditFeedbackForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <InputTextArea @bind-Value="feedback.Message" class="form-control" rows="4" />
+                        <ValidationMessage For="@(() => feedback.Message)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <InputSelect @bind-Value="feedback.Type" class="form-select">
+                            @foreach (var type in Enum.GetValues(typeof(FeedbackType)))
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => feedback.Type)" />
+                    </div>
+
+                    
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" class="btn btn-secondary" @onclick="NavigateBack">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Feedback? feedback;
+
+    protected override async Task OnInitializedAsync()
+    {
+        feedback = await FeedbackService.GetFeedbackByIdAsync(Id);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (feedback != null)
+        {
+            await FeedbackService.UpdateFeedbackAsync(feedback);
+            NavigateBack();
+        }
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo($"/feedback/{Id}");
+    }
+}
