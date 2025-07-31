@@ -1,11 +1,11 @@
-﻿@page "/admin/samples"
+﻿@page "/staff/samples"
 @using Data.Entities
 @using Data.Enum
 @using Microsoft.AspNetCore.Authorization
 @using global::Services.Interfaces
 @inject ISampleService SampleService
 @inject IJSRuntime JSRuntime
-@attribute [Authorize(Roles = "Admin,Manager,Staff")]
+@attribute [Authorize(Roles = "Staff")]
 
 <PageTitle>Sample Management</PageTitle>
 

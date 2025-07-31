@@ -1,4 +1,4 @@
-﻿@page "/admin/results/create"
+﻿@page "/staff/results/create"
 @using Data.Entities
 @using Data.Enum
 @using Microsoft.AspNetCore.Identity
@@ -10,7 +10,7 @@
 @inject UserManager<User> UserManager
 @inject Data.AppDbContext DbContext
 @inject NavigationManager NavigationManager
-@attribute [Authorize(Roles = "Admin,Manager,Staff")]
+@attribute [Authorize(Roles = "Staff")]
 
 <PageTitle>Create New Result</PageTitle>
 
