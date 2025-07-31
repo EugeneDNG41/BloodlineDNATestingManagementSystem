@@ -38,6 +38,7 @@ namespace Services.Services
             var repo = _unitOfWork.Repository<Review>();
             return await repo
                 .AsQueryable()
+                .Include(r => r.User)
                 .Where(r => r.ServiceId == serviceId)
                 .ToListAsync();
         }

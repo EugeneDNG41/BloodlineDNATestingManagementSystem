@@ -30,11 +30,13 @@
             <div class="form-floating mb-2">
                 <label for="fullName" class="form-label">Full Name</label>
                 <InputText id="fullName" class="form-control" @bind-Value="Input.FullName" placeholder="Enter your full name" />
+                <label for="fullName">Full Name</label>             
                 <ValidationMessage For="@(() => Input.FullName)" class="text-danger" />
             </div>
             <div class="mb-2">
                 <label for="dateOfBirth" class="form-label">Date of Birth</label>
                 <InputDate id="dateOfBirth" class="form-control" @bind-Value="Input.DateOfBirth" />
+               
                 <ValidationMessage For="@(() => Input.DateOfBirth)" class="text-danger" />
             </div>
             <div class="form-floating mb-2">

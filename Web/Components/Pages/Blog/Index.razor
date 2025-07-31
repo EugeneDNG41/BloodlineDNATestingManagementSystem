@@ -1,21 +1,38 @@
+@rendermode InteractiveServer
 @page "/blog"
 @using Microsoft.EntityFrameworkCore
 @using Data.Entities
+@using System.Security.Claims
 @inject Data.AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>DNA Testing Blog</PageTitle>
 
 <div class="container py-4">
     <div class="row">
+        <!-- Main Content -->
         <div class="col-lg-8">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <h1 class="h2">DNA Testing Blog</h1>
+
                 <div class="input-group" style="max-width: 300px;">
-                    <input type="text" class="form-control" placeholder="Search articles..." @bind="searchTerm" @oninput="FilterPosts">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Search articles..."
+                           @bind="searchTerm"
+                           @bind:event="oninput" />
                     <button class="btn btn-outline-primary" type="button">
                         <i class="fas fa-search"></i>
                     </button>
                 </div>
+
+                @if (isStaff)
+                {
+                    <a href="/blog/create" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i> Create Blog
+                    </a>
+                }
             </div>
 
             @if (filteredPosts?.Any() == true)
@@ -30,22 +47,31 @@
                                         <a href="/blog/@post.Id" class="text-decoration-none">@post.Title</a>
                                     </h2>
                                     <div class="text-muted small">
-                                        <i class="fas fa-user me-1"></i>By @post.Author.FullName
+                                        <i class="fas fa-user me-1"></i> By @post.Author.FullName
                                         <span class="mx-2">•</span>
-                                        <i class="fas fa-calendar me-1"></i>@post.CreatedAt.ToString("MMMM dd, yyyy")
+                                        <i class="fas fa-calendar me-1"></i> @post.CreatedAt.ToString("MMMM dd, yyyy")
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <p class="card-text text-muted">
-                                @(post.Content.Length > 200 ? 
-                                  System.Text.RegularExpressions.Regex.Replace(post.Content.Substring(0, 200), "<.*?>", "") + "..." : 
-                                  System.Text.RegularExpressions.Regex.Replace(post.Content, "<.*?>", ""))
+                                @{
+                                    var summary = post.Content.Length > 200 ? post.Content.Substring(0, 200) + "..." : post.Content;
+                                    summary = System.Text.RegularExpressions.Regex.Replace(summary, "<.*?>", "");
+                                }
+                                @summary
                             </p>
-                            
-                            <a href="/blog/@post.Id" class="btn btn-outline-primary">
+
+                            <a href="/blog/detail/@post.Id" class="btn btn-outline-primary me-2">
                                 Read More <i class="fas fa-arrow-right ms-1"></i>
                             </a>
+
+                            @if (isAdmin && !post.IsPublished)
+                            {
+                                <button class="btn btn-sm btn-success mt-2" @onclick="() => PublishPost(post.Id)">
+                                    <i class="fas fa-upload me-1"></i> Publish
+                                </button>
+                            }
                         </div>
                     </article>
                 }
@@ -55,11 +81,12 @@
                 <div class="text-center py-5">
                     <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
                     <h4 class="text-muted">No articles found</h4>
-                    <p class="text-muted">Check back soon for new articles about DNA testing and genetics</p>
+                    <p class="text-muted">Try adjusting your search or check back later.</p>
                 </div>
             }
         </div>
 
+        <!-- Sidebar -->
         <div class="col-lg-4">
             <div class="card shadow-sm mb-4">
                 <div class="card-header">
@@ -78,32 +105,10 @@
                             </div>
                         }
                     }
-                </div>
-            </div>
-
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Popular Topics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2">
-                        <span class="badge bg-primary">DNA Basics</span>
-                        <span class="badge bg-secondary">Paternity Testing</span>
-                        <span class="badge bg-success">Ancestry</span>
-                        <span class="badge bg-info">Health Genetics</span>
-                        <span class="badge bg-warning">Sample Collection</span>
-                        <span class="badge bg-danger">Results Interpretation</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5>Need DNA Testing?</h5>
-                    <p class="text-muted">Ready to discover your genetic story? Browse our comprehensive DNA testing services.</p>
-                    <a href="/services" class="btn btn-primary">
-                        <i class="fas fa-vial me-2"></i>View Services
-                    </a>
+                    else
+                    {
+                        <p class="text-muted">No recent posts available.</p>
+                    }
                 </div>
             </div>
         </div>
@@ -114,30 +119,69 @@
     private List<Post> posts = new();
     private List<Post> filteredPosts = new();
     private List<Post> recentPosts = new();
-    private string searchTerm = "";
+
+    private string _searchTerm = string.Empty;
+    private string searchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            if (_searchTerm != value)
+            {
+                _searchTerm = value;
+                FilterPosts();
+            }
+        }
+    }
+
+    private bool isAdmin = false;
+    private bool isStaff = false;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        isAdmin = user.IsInRole("Admin");
+        isStaff = user.IsInRole("Staff");
+
         await LoadPosts();
-        filteredPosts = posts.ToList();
-        recentPosts = posts.Take(5).ToList();
+        FilterPosts();
+
+        recentPosts = posts.Where(p => p.IsPublished).OrderByDescending(p => p.CreatedAt).Take(5).ToList();
     }
 
     private async Task LoadPosts()
     {
-        posts = await DbContext.Posts
-            .Include(p => p.Author)
-            .Where(p => p.IsPublished)
-            .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync();
+        var query = DbContext.Posts.Include(p => p.Author).OrderByDescending(p => p.CreatedAt);
+
+        posts = isAdmin
+            ? await query.ToListAsync()
+            : await query.Where(p => p.IsPublished).ToListAsync();
     }
 
     private void FilterPosts()
     {
-        filteredPosts = posts.Where(p =>
-            string.IsNullOrEmpty(searchTerm) || 
-            p.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-            p.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-        ).ToList();
+        filteredPosts = posts
+            .Where(p =>
+                string.IsNullOrWhiteSpace(searchTerm) ||
+                p.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                p.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task PublishPost(int postId)
+    {
+        var post = await DbContext.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+        if (post != null && !post.IsPublished)
+        {
+            post.IsPublished = true;
+            await DbContext.SaveChangesAsync();
+
+            await LoadPosts();
+            FilterPosts();
+
+            recentPosts = posts.Where(p => p.IsPublished).OrderByDescending(p => p.CreatedAt).Take(5).ToList();
+        }
     }
 }
