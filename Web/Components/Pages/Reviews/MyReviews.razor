@@ -1,0 +1,295 @@
+﻿@page "/reviews/my"
+@rendermode InteractiveServer
+@using Data.Entities
+@using Microsoft.AspNetCore.Components
+@using Web.Components.Account
+@using System.ComponentModel.DataAnnotations;
+@using Microsoft.EntityFrameworkCore;
+@inject global::Services.Interfaces.IReviewService ReviewService
+@inject IdentityUserAccessor UserAccessor
+@inject Data.AppDbContext DbContext
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>My Reviews</PageTitle>
+
+<div class="container py-4">
+    <h2 class="mb-4">My Reviews</h2>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (myReviews.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>You have not submitted any reviews yet.
+        </div>
+    }
+    else
+    {
+        @foreach (var review in myReviews.OrderByDescending(r => r.Id))
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="card-title mb-1">@(review.Service?.ServiceName ?? "Service")</h5>
+                            <div class="text-warning mb-2">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    if (i <= review.Rating)
+                                    {
+                                        <i class="fas fa-star"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="far fa-star"></i>
+                                    }
+                                }
+                                <span class="ms-2 text-muted">(@review.Rating/5)</span>
+                            </div>
+                        </div>
+                        <small class="text-muted">@review.CreatedAt.ToString("MMM dd, yyyy")</small>
+                    </div>
+                    <p class="card-text">@review.Comment</p>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(review)">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => StartDelete(review)">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    <!-- Edit Modal -->
+    @if (editingReview != null)
+    {
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                <h5 class="mb-3">Edit Review for @(editingReview.Service?.ServiceName ?? "Service")</h5>
+
+                <EditForm Model="editModel" OnValidSubmit="HandleEditSubmit">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <InputSelect class="form-select" @bind-Value="editModel.Rating">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <option value="@i">@i Star@(i > 1 ? "s" : "")</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => editModel.Rating)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Comment</label>
+                        <InputTextArea class="form-control" @bind-Value="editModel.Comment" rows="4" placeholder="Share your experience with this service..."></InputTextArea>
+                        <div class="form-text">@(editModel.Comment?.Length ?? 0)/1000 characters</div>
+                        <ValidationMessage For="@(() => editModel.Comment)" class="text-danger" />
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    <!-- Delete Modal -->
+    @if (deleteReview != null)
+    {
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%;">
+                <h5 class="mb-3 text-danger">Delete Review</h5>
+                <p>Are you sure you want to delete your review for <strong>@(deleteReview.Service?.ServiceName ?? "Service")</strong>?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Success/Error Messages -->
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <div class="alert @(isSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show mt-3" role="alert">
+            <i class="fas @(isSuccess ? "fa-check-circle" : "fa-exclamation-circle") me-2"></i>
+            @message
+            <button type="button" class="btn-close" @onclick="ClearMessage" aria-label="Close"></button>
+        </div>
+    }
+</div>
+
+@code {
+    private User user = default!;
+    private List<Review> myReviews = new();
+    private bool isLoading = true;
+    private Review? editingReview = null;
+    private ReviewEditModel editModel = new();
+    private Review? deleteReview = null;
+    private string message = string.Empty;
+    private bool isSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                ShowMessage("HttpContext is not available", false);
+                isLoading = false;
+                return;
+            }
+
+            user = await UserAccessor.GetRequiredUserAsync(httpContext);
+            await LoadMyReviews();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error loading user: {ex.Message}", false);
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadMyReviews()
+    {
+        try
+        {
+            isLoading = true;
+            myReviews = await DbContext.Reviews
+                .Include(r => r.Service)
+                .Where(r => r.UserId == user.Id)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error loading reviews: {ex.Message}", false);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartEdit(Review review)
+    {
+        editingReview = review;
+        editModel = new ReviewEditModel
+            {
+                Rating = review.Rating,
+                Comment = review.Comment ?? string.Empty
+            };
+        StateHasChanged();
+    }
+
+    private void StartDelete(Review review)
+    {
+        deleteReview = review;
+        StateHasChanged();
+    }
+
+    private void CancelEdit()
+    {
+        editingReview = null;
+        editModel = new();
+        StateHasChanged();
+    }
+
+    private void CancelDelete()
+    {
+        deleteReview = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleEditSubmit()
+    {
+        if (editingReview == null) return;
+
+        try
+        {
+            editingReview.Rating = editModel.Rating;
+            editingReview.Comment = editModel.Comment;
+            editingReview.LastUpdatedAt = DateTime.UtcNow;
+
+            DbContext.Reviews.Update(editingReview);
+            await DbContext.SaveChangesAsync();
+
+            ShowMessage("Review updated successfully!", true);
+            editingReview = null;
+            editModel = new();
+            await LoadMyReviews();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error updating review: {ex.Message}", false);
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (deleteReview == null) return;
+
+        try
+        {
+            DbContext.Reviews.Remove(deleteReview);
+            await DbContext.SaveChangesAsync();
+
+            ShowMessage("Review deleted successfully!", true);
+            deleteReview = null;
+            await LoadMyReviews();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error deleting review: {ex.Message}", false);
+        }
+    }
+
+    private void ShowMessage(string msg, bool success)
+    {
+        message = msg;
+        isSuccess = success;
+        StateHasChanged();
+
+        // Auto-hide message after 5 seconds
+        _ = Task.Delay(5000).ContinueWith(_ =>
+        {
+            message = string.Empty;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void ClearMessage()
+    {
+        message = string.Empty;
+        StateHasChanged();
+    }
+
+    public class ReviewEditModel
+    {
+        [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5 stars")]
+        public int Rating { get; set; } = 1;
+
+        [Required(ErrorMessage = "Review comment is required")]
+        [StringLength(1000, MinimumLength = 10, ErrorMessage = "Review must be between 10 and 1000 characters")]
+        public string Comment { get; set; } = string.Empty;
+    }
+}

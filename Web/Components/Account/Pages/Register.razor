@@ -27,15 +27,26 @@
             <h2>Create a new account.</h2>
             <hr />
             <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
+            <div class="form-floating mb-2">
                 <label for="fullName" class="form-label">Full Name</label>
                 <InputText id="fullName" class="form-control" @bind-Value="Input.FullName" placeholder="Enter your full name" />
+                <label for="fullName">Full Name</label>             
                 <ValidationMessage For="@(() => Input.FullName)" class="text-danger" />
             </div>
-            <div class="mb-3">
+            <div class="mb-2">
                 <label for="dateOfBirth" class="form-label">Date of Birth</label>
                 <InputDate id="dateOfBirth" class="form-control" @bind-Value="Input.DateOfBirth" />
+               
                 <ValidationMessage For="@(() => Input.DateOfBirth)" class="text-danger" />
+            </div>
+            <div class="form-floating mb-2">
+                <label>Gender</label>
+                <InputSelect @bind-Value="Input.Gender" class="form-control">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                    <option value="PreferNotToSay">Prefer not to say</option>
+                </InputSelect>
             </div>
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
@@ -149,6 +160,9 @@
         [DataType(DataType.Password)]
         [Display(Name = "Password")]
         public string Password { get; set; } = "";
+
+        [Display(Name = "Gender")]
+        public string? Gender { get; set; }
 
         [DataType(DataType.Password)]
         [Display(Name = "Confirm password")]

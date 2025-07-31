@@ -1,0 +1,228 @@
+﻿@page "/admin/appointments/{id:int}"
+@using Microsoft.EntityFrameworkCore
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Manager")]
+
+@inject Data.AppDbContext DbContext
+@inject NavigationManager Navigation
+
+<PageTitle>Admin - Appointment Details</PageTitle>
+
+@if (appointment != null)
+{
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/admin/appointments">All Appointments</a></li>
+                <li class="breadcrumb-item active">Appointment Details</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">@appointment.Service.ServiceName</h3>
+                        <span class="badge @GetStatusBadgeClass(appointment.Status) fs-6">
+                            @appointment.Status.ToString()
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6>Scheduled Date & Time</h6>
+                                <p class="mb-1">
+                                    <i class="fas fa-calendar text-primary me-2"></i>
+                                    @appointment.ScheduledAt.ToString("MMMM dd, yyyy")
+                                </p>
+                                <p class="mb-0">
+                                    <i class="fas fa-clock text-primary me-2"></i>
+                                    @appointment.ScheduledAt.ToString("hh:mm tt")
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Service Price</h6>
+                                <p class="h4 text-success mb-0">$@appointment.Service.Price.ToString("F2")</p>
+                                <small class="text-muted">Processing time: @appointment.Service.Duration</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Appointment Location</h6>
+                            <div class="bg-light p-3 rounded">
+                                <p class="mb-1"><strong>@appointment.Address.Street</strong></p>
+                                <p class="mb-0 text-muted">
+                                    @appointment.Address.Province, @appointment.Address.ZipCode
+                                </p>
+                                @if (!string.IsNullOrEmpty(appointment.Address.Notes))
+                                {
+                                    <small class="text-muted">Notes: @appointment.Address.Notes</small>
+                                }
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(appointment.Description))
+                        {
+                            <div class="mb-4">
+                                <h6>Additional Notes</h6>
+                                <p class="text-muted">@appointment.Description</p>
+                            </div>
+                        }
+
+                        @if (appointment.Status == AppointmentStatus.Cancelled && !string.IsNullOrEmpty(appointment.CancellationReason))
+                        {
+                            <div class="mb-4">
+                                <h6>Cancellation Reason</h6>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    @appointment.CancellationReason
+                                </div>
+                            </div>
+                        }
+
+                        @if (appointment.Sample != null)
+                        {
+                            <div class="mb-4">
+                                <h6>Sample Information</h6>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><strong>Collection Method:</strong> @appointment.Sample.CollectionMethod</p>
+                                                <p class="mb-1"><strong>Sample Type:</strong> @appointment.Sample.Type</p>
+                                                <p class="mb-0">
+                                                    <strong>Status:</strong>
+                                                    <span class="badge @GetSampleStatusBadgeClass(appointment.Sample.Status)">
+                                                        @appointment.Sample.Status
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><strong>Collection Date:</strong> @appointment.Sample.CollectionDate.ToString("MMM dd, yyyy")</p>
+                                                @if (appointment.Sample.ReceivedDate.HasValue)
+                                                {
+                                                    <p class="mb-0"><strong>Received Date:</strong> @appointment.Sample.ReceivedDate.Value.ToString("MMM dd, yyyy")</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">Admin Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (appointment.Status == AppointmentStatus.Scheduled)
+                        {
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-success" @onclick="MarkAsCompleted">
+                                    <i class="fas fa-check me-2"></i>Mark as Completed
+                                </button>
+                                <a class="btn btn-outline-warning" href="/appointments/@appointment.Id/reschedule">
+                                    <i class="fas fa-calendar-alt me-2"></i>Reschedule
+                                </a>
+                                <a class="btn btn-outline-danger" href="/appointments/@appointment.Id/cancel">
+                                    <i class="fas fa-times me-2"></i>Cancel Appointment
+                                </a>
+                            </div>
+                        }
+                        else if (appointment.Status == AppointmentStatus.Completed)
+                        {
+                            <div class="d-grid gap-2">
+                                <a href="/results?appointmentId=@appointment.Id" class="btn btn-primary">
+                                    <i class="fas fa-file-medical me-2"></i>View Results
+                                </a>
+                            </div>
+                        }
+                        <hr />
+                        <div class="d-grid">
+                            <a href="/admin/appointments" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to All Appointments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-body">
+                        <h6><i class="fas fa-info-circle text-info me-2"></i>Need Help?</h6>
+                        <p class="small text-muted mb-2">Have questions about this appointment?</p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-phone me-1"></i>Call Support
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-envelope me-1"></i>Email Support
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container py-5">
+        <div class="text-center">
+            <h2>Appointment Not Found</h2>
+            <p class="text-muted">The requested appointment could not be found.</p>
+            <a href="/admin/appointments" class="btn btn-primary">Back to Appointments</a>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Appointment? appointment;
+
+    protected override async Task OnInitializedAsync()
+    {
+        appointment = await DbContext.Appointments
+            .Include(a => a.Service)
+            .Include(a => a.Address)
+            .Include(a => a.Sample)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+    }
+
+    private async Task MarkAsCompleted()
+    {
+        if (appointment != null && appointment.Status == AppointmentStatus.Scheduled)
+        {
+            appointment.Status = AppointmentStatus.Completed;
+            DbContext.Update(appointment);
+            await DbContext.SaveChangesAsync();
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+        }
+    }
+
+    private string GetStatusBadgeClass(AppointmentStatus status) =>
+        status switch
+        {
+            AppointmentStatus.Scheduled => "bg-primary",
+            AppointmentStatus.Completed => "bg-success",
+            AppointmentStatus.Cancelled => "bg-danger",
+            AppointmentStatus.NoShow => "bg-warning",
+            _ => "bg-secondary"
+        };
+
+    private string GetSampleStatusBadgeClass(SampleStatus status) =>
+        status switch
+        {
+            SampleStatus.Collected => "bg-info",
+            SampleStatus.Received => "bg-primary",
+            SampleStatus.Processing => "bg-warning",
+            SampleStatus.Completed => "bg-success",
+            SampleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+}

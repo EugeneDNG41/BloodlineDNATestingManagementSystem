@@ -1,0 +1,359 @@
+@page "/admin/users/{UserId}/edit"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using Data.Entities
+@using Microsoft.AspNetCore.Authorization
+@inject UserManager<User> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+
+<PageTitle>Edit User</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Edit User</h1>
+        <div class="d-flex gap-2">
+            <a href="/admin/users/@UserId" class="btn btn-outline-info">
+                <i class="fas fa-eye me-2"></i>View Details
+            </a>
+            <a href="/admin/users" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Users
+            </a>
+        </div>
+    </div>
+
+    @if (user == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading user information...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">Edit User: @user.FullName</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                @errorMessage
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(successMessage))
+                        {
+                            <div class="alert alert-success">
+                                @successMessage
+                            </div>
+                        }
+
+                        <EditForm Model="Input" OnValidSubmit="UpdateUser" FormName="edit-user">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger mb-3" />
+
+                            <div class="row g-3">
+                                <div class="form-floating mb-3">
+                                    <InputText @bind-Value="Input.FullName" class="form-control" placeholder="Full Name" />
+                                    <label>Full Name</label>
+                                    <ValidationMessage For="() => Input.FullName" class="text-danger" />
+                                </div>
+                            </div>
+
+                            <div class="form-floating mb-3">
+                                <InputText @bind-Value="Input.Email" class="form-control" placeholder="Email" />
+                                <label>Email</label>
+                                <ValidationMessage For="() => Input.Email" class="text-danger" />
+                            </div>
+
+                            <div class="form-floating mb-3">
+                                <InputText @bind-Value="Input.PhoneNumber" class="form-control" placeholder="Phone Number" />
+                                <label>Phone Number</label>
+                                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating mb-3">
+                                        <InputDate @bind-Value="Input.DateOfBirth" class="form-control" />
+                                        <label>Date of Birth</label>
+                                        <ValidationMessage For="() => Input.DateOfBirth" class="text-danger" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating mb-3">
+                                        <InputSelect @bind-Value="Input.Gender" class="form-control">
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                            <option value="PreferNotToSay">Prefer not to say</option>
+                                        </InputSelect>
+                                        <label>Gender</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">User Roles</label>
+                                <div class="row">
+                                    @foreach (var role in availableRoles)
+                                    {
+                                        <div class="col-md-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       @onchange="@((e) => ToggleRole(role.Name!, (bool)e.Value!))"
+                                                       checked="@userRoles.Contains(role.Name!)" />
+                                                <label class="form-check-label">
+                                                    @role.Name
+                                                </label>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <InputCheckbox @bind-Value="Input.EmailConfirmed" class="form-check-input" />
+                                        <label class="form-check-label">
+                                            Email Confirmed
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <InputCheckbox @bind-Value="Input.IsLocked" class="form-check-input" />
+                                        <label class="form-check-label">
+                                            Account Locked
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <h6 class="mb-3">Reset Password (Optional)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating mb-3">
+                                        <InputText type="password" @bind-Value="Input.NewPassword" class="form-control" placeholder="New Password" />
+                                        <label>New Password</label>
+                                        <ValidationMessage For="() => Input.NewPassword" class="text-danger" />
+                                        <div class="form-text">Leave blank to keep current password</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating mb-3">
+                                        <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" placeholder="Confirm Password" />
+                                        <label>Confirm New Password</label>
+                                        <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="/admin/users" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                                <button type="submit" class="btn btn-primary" disabled="@isUpdating">
+                                    @if (isUpdating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    <i class="fas fa-save me-2"></i>Update User
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string UserId { get; set; } = "";
+
+    private User? user;
+    private List<IdentityRole> availableRoles = new();
+    private List<string> userRoles = new();
+    private List<string> rolesToAdd = new();
+    private List<string> rolesToRemove = new();
+    
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isUpdating = false;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUser();
+        await LoadRoles();
+    }
+
+    private async Task LoadUser()
+    {
+        user = await UserManager.FindByIdAsync(UserId);
+        if (user != null)
+        {
+            Input.FullName = user.FullName ?? "";
+            Input.Email = user.Email!;
+            Input.PhoneNumber = user.PhoneNumber;
+            Input.DateOfBirth = user.DateOfBirth;
+            Input.Gender = user.Gender;
+            Input.EmailConfirmed = user.EmailConfirmed;
+            Input.IsLocked = user.LockoutEnd.HasValue && user.LockoutEnd > DateTime.UtcNow;
+
+            userRoles = (await UserManager.GetRolesAsync(user)).ToList();
+        }
+    }
+
+    private async Task LoadRoles()
+    {
+        availableRoles = RoleManager.Roles.ToList();
+    }
+
+    private void ToggleRole(string roleName, bool isSelected)
+    {
+        if (isSelected && !userRoles.Contains(roleName))
+        {
+            rolesToAdd.Add(roleName);
+            rolesToRemove.Remove(roleName);
+        }
+        else if (!isSelected && userRoles.Contains(roleName))
+        {
+            rolesToRemove.Add(roleName);
+            rolesToAdd.Remove(roleName);
+        }
+    }
+
+    private async Task UpdateUser()
+    {
+        if (user == null) return;
+
+        isUpdating = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            // Update basic user information
+            user.FullName = Input.FullName;
+            user.Email = Input.Email;
+            user.UserName = Input.Email;
+            user.PhoneNumber = Input.PhoneNumber;
+            user.DateOfBirth = Input.DateOfBirth;
+            user.EmailConfirmed = Input.EmailConfirmed;
+
+            // Handle account lock status
+            if (Input.IsLocked && (!user.LockoutEnd.HasValue || user.LockoutEnd <= DateTime.UtcNow))
+            {
+                await UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
+            }
+            else if (!Input.IsLocked && user.LockoutEnd.HasValue && user.LockoutEnd > DateTime.UtcNow)
+            {
+                await UserManager.SetLockoutEndDateAsync(user, null);
+            }
+
+            var result = await UserManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+                return;
+            }
+
+            // Update roles
+            foreach (var role in rolesToAdd)
+            {
+                await UserManager.AddToRoleAsync(user, role);
+                userRoles.Add(role);
+            }
+
+            foreach (var role in rolesToRemove)
+            {
+                await UserManager.RemoveFromRoleAsync(user, role);
+                userRoles.Remove(role);
+            }
+
+            rolesToAdd.Clear();
+            rolesToRemove.Clear();
+
+            // Update password if provided
+            if (!string.IsNullOrEmpty(Input.NewPassword))
+            {
+                var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+                var passwordResult = await UserManager.ResetPasswordAsync(user, token, Input.NewPassword);
+                
+                if (!passwordResult.Succeeded)
+                {
+                    errorMessage = "User updated but password change failed: " + 
+                                 string.Join(", ", passwordResult.Errors.Select(e => e.Description));
+                    return;
+                }
+            }
+
+            successMessage = "User has been updated successfully!";
+            Input.NewPassword = "";
+            Input.ConfirmPassword = "";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isUpdating = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+
+        [Required]
+        [Display(Name = "Full Name")]
+        public string FullName { get; set; } = "";
+
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Phone]
+        [Display(Name = "Phone Number")]
+        public string? PhoneNumber { get; set; }
+
+        [Required]
+        [Display(Name = "Date of Birth")]
+        public DateTime DateOfBirth { get; set; }
+
+        [Display(Name = "Gender")]
+        public string? Gender { get; set; }
+
+        [Display(Name = "Email Confirmed")]
+        public bool EmailConfirmed { get; set; }
+
+        [Display(Name = "Account Locked")]
+        public bool IsLocked { get; set; }
+
+        // [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "New Password")]
+        public string? NewPassword { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm new password")]
+        [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
+        public string? ConfirmPassword { get; set; }
+    }
+}

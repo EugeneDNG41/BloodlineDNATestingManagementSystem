@@ -1,14 +1,18 @@
-@page "/appointments"
+﻿@page "/appointments"
 @using Microsoft.EntityFrameworkCore
 @using Data.Entities
 @using Data.Enum
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims;
 @using Web.Components.Account
+@using global::Services.Interfaces
 @inject IdentityUserAccessor UserAccessor
 @inject Data.AppDbContext DbContext
 @attribute [Authorize(Roles = "Customer")]
 @inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAppointmentService AppointmentService
 
 <PageTitle>My Appointments</PageTitle>
 
@@ -24,7 +28,7 @@
         <div class="col-md-8">
             <div class="input-group">
                 <input type="text" class="form-control" placeholder="Search appointments..." @bind="searchTerm" @oninput="FilterAppointments">
-                <button class="btn btn-outline-secondary" type="button">
+                <button class="btn btn-outline-secondary" type="button" @onclick="FilterAppointments">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
@@ -66,7 +70,7 @@
                                 </div>
                                 <div class="d-flex align-items-start mb-2">
                                     <i class="fas fa-map-marker-alt text-muted me-2 mt-1"></i>
-                                    <span>@appointment.Address.Street, @appointment.Address.City</span>
+                                    <span>@appointment.Address.Street, @appointment.Address.Province</span>
                                 </div>
                             </div>
 
@@ -106,6 +110,47 @@
     }
 </div>
 
+@if (isRescheduleModalVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reschedule Appointment</h5>
+                    <button type="button" class="btn-close" @onclick="CloseRescheduleModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newDate" class="form-label">New Date <span class="text-danger">*</span></label>
+                        <InputDate id="newDate" class="form-control"
+                                   @bind-Value="RescheduleModel.Date"
+                                   min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="newTime" class="form-label">New Time <span class="text-danger">*</span></label>
+                        <InputSelect id="newTime" class="form-select" @bind-Value="RescheduleModel.Time">
+                            <option value="">Select time...</option>
+                            @foreach (var timeSlot in availableTimeSlots)
+                            {
+                                <option value="@timeSlot">@timeSlot</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseRescheduleModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="ConfirmReschedule">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+
+
+
 @code {
 
     private User user = default!;
@@ -129,27 +174,45 @@
         }
     }
 
+    private RescheduleAppointmentModel RescheduleModel = new();
+    private bool isRescheduleModalVisible = false;
+    private List<string> availableTimeSlots = new()
+{
+    "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+    "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM"
+};
+
+
     protected override async Task OnInitializedAsync()
     {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userPrincipal = authState.User;
+
+        if (userPrincipal.Identity is { IsAuthenticated: true })
+        {
+            var userId = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            user = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        }
+
         await LoadAppointments();
-        filteredAppointments = appointments;
+        FilterAppointments();
     }
+
 
     private async Task LoadAppointments()
     {
 
-        appointments = await DbContext.Appointments
-            .Include(a => a.Service)
-            .Include(a => a.Address)
-            .Where(a => a.UserId == user.Id && !a.IsDeleted)
-            .OrderByDescending(a => a.ScheduledAt).ToListAsync();
+        appointments = await AppointmentService.GetAppointmentsByUserAsync(user.Id);
+        appointments = appointments
+            .Where(a => !a.IsDeleted)
+            .OrderByDescending(a => a.ScheduledAt)
+            .ToList();
     }
 
     private void FilterAppointments()
     {
         filteredAppointments = appointments.Where(a =>
-            (string.IsNullOrEmpty(searchTerm) || 
+            (string.IsNullOrEmpty(searchTerm) ||
              a.Service.ServiceName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
              a.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(selectedStatus) || a.Status.ToString() == selectedStatus)
@@ -173,14 +236,9 @@
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to cancel this appointment?");
         if (confirmed)
         {
-            var appointment = await DbContext.Appointments.FindAsync(appointmentId);
-            if (appointment != null)
+            var success = await AppointmentService.CancelAppointmentAsync(appointmentId, user.Id, "Cancelled by customer");
+            if (success)
             {
-                appointment.Status = AppointmentStatus.Cancelled;
-                appointment.CancellationReason = "Cancelled by customer";
-                appointment.CancelledByUserId = "current-user-id";
-                
-                await DbContext.SaveChangesAsync();
                 await LoadAppointments();
                 FilterAppointments();
             }
@@ -189,7 +247,71 @@
 
     private void ShowRescheduleModal(int appointmentId)
     {
-        // Implement reschedule modal
-        JSRuntime.InvokeVoidAsync("alert", "Reschedule functionality coming soon!");
+        var appointment = appointments.FirstOrDefault(a => a.Id == appointmentId);
+        if (appointment != null)
+        {
+            RescheduleModel = new RescheduleAppointmentModel
+                {
+                    AppointmentId = appointment.Id,
+                    Date = null,
+                    Time = "" // Mặc định không chọn time
+                };
+            isRescheduleModalVisible = true;
+        }
+    }
+
+    private void CloseRescheduleModal()
+    {
+        isRescheduleModalVisible = false;
+        RescheduleModel = new(); // Reset model
+    }
+
+
+    private async Task ConfirmReschedule()
+{
+    if (string.IsNullOrWhiteSpace(RescheduleModel.Time))
+    {
+        await JSRuntime.InvokeVoidAsync("alert", "Please select a time.");
+        return;
+    }
+
+    var convertedTime = ConvertTo24Hour(RescheduleModel.Time);
+
+    var success = await AppointmentService.RescheduleAppointmentAsync(
+        RescheduleModel.AppointmentId,
+        RescheduleModel.Date.Value,
+        convertedTime
+    );
+
+    if (success)
+    {
+        isRescheduleModalVisible = false;
+        await LoadAppointments();
+        FilterAppointments();
+        await JSRuntime.InvokeVoidAsync("alert", "Appointment rescheduled successfully.");
+    }
+    else
+    {
+        await JSRuntime.InvokeVoidAsync("alert", "Rescheduling failed. Time slot may be taken.");
+    }
+}
+
+
+
+    private string ConvertTo24Hour(string time12Hour)
+    {
+        if (DateTime.TryParse(time12Hour, out DateTime dateTime))
+        {
+            return dateTime.ToString("HH:mm");
+        }
+        return "09:00";
+    }
+
+
+    public class RescheduleAppointmentModel
+    {
+        public int AppointmentId { get; set; }
+        public DateTime? Date { get; set; } 
+        public string Time { get; set; } = "";
     }
 }

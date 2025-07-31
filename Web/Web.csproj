@@ -7,9 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Components\Pages\Manager\NewFolder1\**" />
+    <Content Remove="Components\Pages\Manager\NewFolder1\**" />
+    <EmbeddedResource Remove="Components\Pages\Manager\NewFolder1\**" />
+    <None Remove="Components\Pages\Manager\NewFolder1\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.15" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.15">
       <PrivateAssets>all</PrivateAssets>
@@ -28,10 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Service\Services.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Components\Pages\Staff\" />
   </ItemGroup>
 
 </Project>

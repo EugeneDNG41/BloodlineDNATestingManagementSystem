@@ -42,11 +42,10 @@ namespace Microsoft.AspNetCore.Routing
 
             accountGroup.MapPost("/Logout", async (
                 ClaimsPrincipal user,
-                SignInManager<User> signInManager,
-                [FromForm] string returnUrl) =>
+                SignInManager<User> signInManager) =>
             {
                 await signInManager.SignOutAsync();
-                return TypedResults.LocalRedirect($"~/{returnUrl}");
+                return TypedResults.LocalRedirect($"~/");
             });
 
             var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();

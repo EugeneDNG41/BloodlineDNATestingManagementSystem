@@ -1,0 +1,292 @@
+@page "/manager/locations/create"
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@using Web.Components.Account.Shared
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Roles = "Manager")]
+@inject IJSRuntime JSRuntime
+@inject Data.AppDbContext DbContext
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Add New Location</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/manager">Manager Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/manager/locations">Locations</a></li>
+                    <li class="breadcrumb-item active">Add New</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-plus me-2"></i>Add New Location</h2>
+                    <p class="text-muted mb-0">Add a new laboratory or clinic location</p>
+                </div>
+                <a href="/manager/locations" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Locations
+                </a>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-building me-2"></i>Location Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(message))
+                            {
+                                <p style="color: red;">@message</p>
+                            }
+
+                            <EditForm Model="addressModel" OnValidSubmit="SaveLocation">
+                                <DataAnnotationsValidator />
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Location Type *</label>
+                                        <InputSelect @bind-Value="addressModel.LocationType" class="form-select">
+                                            <option value="@LocationType.Lab">Laboratory</option>
+                                            <option value="@LocationType.Clinic">Clinic</option>
+                                        </InputSelect>
+                                        <ValidationMessage For="@(() => addressModel.LocationType)" class="text-danger" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Location Name</label>
+                                        <InputText @bind-Value="locationName" class="form-control" placeholder="Enter location name" />
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Street Address *</label>
+                                        <InputText @bind-Value="addressModel.Street" class="form-control" placeholder="Enter your street address" />
+                                        <ValidationMessage For="@(() => addressModel.Street)" class="text-danger" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Zip Code *</label>
+                                        <InputText @bind-Value="addressModel.ZipCode" class="form-control" placeholder="Enter zip code" />
+                                        <ValidationMessage For="@(() => addressModel.ZipCode)" class="text-danger" />
+                                    </div>
+                                </div>
+
+                                <div class="css_select_div mb-3">
+                                    <label class="form-label d-block">Location</label>
+                                    <select class="css_select" id="tinh" name="tinh" title="Chọn Tỉnh Thành" @onchange="OnProvinceChanged">
+                                        <option value="0">Tỉnh Thành</option>
+                                    </select>
+                                    <select class="css_select" id="quan" name="quan" title="Chọn Quận Huyện" @onchange="OnDistrictChanged">
+                                        <option value="0">Quận Huyện</option>
+                                    </select>
+                                    <select class="css_select" id="phuong" name="phuong" title="Chọn Phường Xã" @onchange="OnWardChanged">
+                                        <option value="0">Phường Xã</option>
+                                    </select>
+                                    <ValidationMessage For="@(() => addressModel.Province)" class="text-danger" />
+                                </div>
+
+
+                                <div class="mb-3">
+                                    <label class="form-label">Opening Hours</label>
+                                    <InputText @bind-Value="addressModel.OpeningHours" class="form-control" 
+                                             placeholder="e.g., Mon-Fri: 8:00 AM - 6:00 PM, Sat: 9:00 AM - 2:00 PM" />
+                                    <div class="form-text">Enter the operating hours for this location</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Additional Notes</label>
+                                    <InputTextArea @bind-Value="addressModel.Notes" class="form-control" rows="3" 
+                                                 placeholder="Any additional information about this location (services, equipment, special instructions, etc.)" />
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="/manager/locations" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        <i class="fas fa-save me-2"></i>Save Location
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Address addressModel = new();
+    private string locationName = "";
+    private bool isSaving = false;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        addressModel.LocationType = LocationType.Lab;
+        addressModel.UserId = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("initializeLocationAPI");
+        }
+    }
+
+    private async Task OnProvinceChanged(ChangeEventArgs e)
+    {
+        var selectedText = await JSRuntime.InvokeAsync<string>("getSelectedText", "tinh");
+        addressModel.Province = selectedText;
+        StateHasChanged();
+    }
+
+    private async Task OnDistrictChanged(ChangeEventArgs e)
+    {
+        var selectedText = await JSRuntime.InvokeAsync<string>("getSelectedText", "quan");
+        addressModel.District = selectedText;
+        StateHasChanged();
+    }
+
+    private async Task OnWardChanged(ChangeEventArgs e)
+    {
+        var selectedText = await JSRuntime.InvokeAsync<string>("getSelectedText", "phuong");
+        addressModel.Ward = selectedText;
+        StateHasChanged();
+    }
+
+    private async Task SaveLocation()
+    {
+        isSaving = true;
+        message = null;
+
+        try
+        {
+            if (addressModel.Province == "Tỉnh Thành" || addressModel.District == "Quận Huyện" || addressModel.Ward == "Phường Xã")
+            {
+                // Handle as invalid input
+                message = "Please select a province/city, district, and/or ward";
+                return;
+            }
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(addressModel.Street))
+            {
+                message = "Street address is required.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(addressModel.Province))
+            {
+                message = "Please select a province/city.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(addressModel.District))
+            {
+                message = "Please select a district.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(addressModel.ZipCode))
+            {
+                message = "Zip code is required.";
+                return;
+            }
+
+            
+            if (string.IsNullOrWhiteSpace(locationName))
+            {
+                locationName = $"{addressModel.LocationType} - {addressModel.District}, {addressModel.Province}";
+            }
+
+            addressModel.UserId = null;
+
+            DbContext.Addresses.Add(addressModel);
+            await DbContext.SaveChangesAsync();
+
+            NavigationManager.NavigateTo("/manager/locations");
+        }
+        catch (Exception ex)
+        {
+            message = $"Error saving location: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
+
+<script src="https://esgoo.net/scripts/jquery.js"></script>
+<style type="text/css">
+    .css_select_div { 
+        text-align: center;
+    }
+    .css_select { 
+        display: inline-table; 
+        width: 25%; 
+        padding: 5px; 
+        margin: 5px 2%; 
+        border: solid 1px #686868; 
+        border-radius: 5px;
+    }
+</style>
+<script>
+    window.initializeLocationAPI = () => {
+        $(document).ready(function() {
+            //Lấy tỉnh thành
+            $.getJSON('https://esgoo.net/api-tinhthanh/1/0.htm',function(data_tinh){
+                if(data_tinh.error==0){
+                    $.each(data_tinh.data, function (key_tinh,val_tinh) {
+                        $("#tinh").append('<option value="'+val_tinh.id+'">'+val_tinh.full_name+'</option>');
+                    });
+                    $("#tinh").change(function(e){
+                        var idtinh=$(this).val();
+                        //Lấy quận huyện
+                        $.getJSON('https://esgoo.net/api-tinhthanh/2/'+idtinh+'.htm',function(data_quan){
+                            if(data_quan.error==0){
+                                $("#quan").html('<option value="0">Quận Huyện</option>');
+                                $("#phuong").html('<option value="0">Phường Xã</option>');
+                                $.each(data_quan.data, function (key_quan,val_quan) {
+                                    $("#quan").append('<option value="'+val_quan.id+'">'+val_quan.full_name+'</option>');
+                                });
+                                //Lấy phường xã
+                                $("#quan").change(function(e){
+                                    var idquan=$(this).val();
+                                    $.getJSON('https://esgoo.net/api-tinhthanh/3/'+idquan+'.htm',function(data_phuong){
+                                        if(data_phuong.error==0){
+                                            $("#phuong").html('<option value="0">Phường Xã</option>');
+                                            $.each(data_phuong.data, function (key_phuong,val_phuong) {
+                                                $("#phuong").append('<option value="'+val_phuong.id+'">'+val_phuong.full_name+'</option>');
+                                            });
+                                        }
+                                    });
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+        });
+    };
+
+    window.getSelectedText = (selectId) => {
+        var select = document.getElementById(selectId);
+        return select.options[select.selectedIndex].text;
+    };
+</script>

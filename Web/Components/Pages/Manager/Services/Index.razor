@@ -1,0 +1,184 @@
+@page "/manager/services"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components
+@using Data.Entities
+@inject IJSRuntime JSRuntime
+@inject global::Services.Interfaces.IServiceService ServiceService
+
+<PageTitle>Service Management (Manager)</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Service Management</h1>
+        <a href="/manager/services/create" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Service
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">Services (@services.Count)</h5>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search services..." value="@searchTerm" @oninput="OnSearchInput">
+                        <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (filteredServices?.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Service Name</th>
+                                <th>Price</th>
+                                <th>Duration</th>
+                                <th>Appointments</th>
+                                <th>Reviews</th>
+                                <th>Status</th>
+                                <th width="200">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var service in filteredServices)
+                            {
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>@service.ServiceName</strong>
+                                            <br>
+                                            <small class="text-muted">@(service.Description.Length > 50 ? service.Description.Substring(0, 50) + "..." : service.Description)</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-success">$@service.Price.ToString("F2")</span>
+                                    </td>
+                                    <td>@service.Duration</td>
+                                    <td>
+                                        <span class="badge bg-info">@service.Appointments?.Count ?? 0</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-warning me-1">@service.Reviews?.Count ?? 0</span>
+                                            <small class="text-muted">4.8★</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">Active</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="/manager/services/@service.Id" class="btn btn-outline-primary" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="/manager/services/@service.Id/edit" class="btn btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-outline-danger" @onclick="() => DeleteService(service.Id)" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No services found</h4>
+                    <p class="text-muted">Create your first service to get started</p>
+                    <a href="/manager/services/create" class="btn btn-primary">Add New Service</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Service> services = new();
+    private List<Service> filteredServices = new();
+    private string searchTerm = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServices();
+        FilterServices();
+    }
+
+    private async Task LoadServices()
+    {
+        services = await ServiceService.GetAllAsync();
+        FilterServices();
+    }
+
+    private void FilterServices()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            // Nếu search term rỗng, hiển thị tất cả services
+            filteredServices = services.ToList();
+        }
+        else
+        {
+            // Nếu có search term, lọc theo điều kiện
+            filteredServices = services.Where(s =>
+                s.ServiceName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                s.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                s.Duration.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+        
+        // Debug log
+        Console.WriteLine($"Search term: '{searchTerm}'");
+        Console.WriteLine($"Total services: {services.Count}");
+        Console.WriteLine($"Filtered services: {filteredServices.Count}");
+        
+        StateHasChanged();
+    }
+
+    private async Task DeleteService(int id)
+    {
+        try
+        {
+            var success = await ServiceService.DeleteAsync(id);
+            if (success)
+            {
+                // Refresh danh sách services
+                await LoadServices();
+                await JSRuntime.InvokeVoidAsync("alert", "Service deleted successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to delete service!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error deleting service: {ex.Message}");
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        FilterServices();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        FilterServices();
+    }
+} 

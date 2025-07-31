@@ -7,11 +7,15 @@
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims;
 @using Web.Components.Account
+@using global::Services.Interfaces
 @inject IdentityUserAccessor UserAccessor
 @inject Data.AppDbContext DbContext
 @attribute [Authorize(Roles = "Customer")]
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAppointmentService AppointmentService
 
 <PageTitle>Book Appointment</PageTitle>
 
@@ -37,7 +41,7 @@
                     </h3>
                 </div>
                 <div class="card-body">
-                    <EditForm Model="appointmentModel" OnValidSubmit="HandleValidSubmit">
+                    <EditForm Model="appointmentModel" OnValidSubmit="HandleValidSubmit" FormName="BookAppointment">
                         <DataAnnotationsValidator />
 
                         @if (ServiceId == null)
@@ -58,8 +62,8 @@
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <label for="appointmentDate" class="form-label">Preferred Date <span class="text-danger">*</span></label>
-                                <InputDate id="appointmentDate" class="form-control" @bind-Value="appointmentModel.ScheduledDate" 
-                                         min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                <InputDate id="appointmentDate" class="form-control" @bind-Value="appointmentModel.ScheduledDate"
+                                           min="@DateTime.Today.ToString("yyyy-MM-dd")" />
                                 <ValidationMessage For="@(() => appointmentModel.ScheduledDate)" class="text-danger" />
                             </div>
                             <div class="col-md-6">
@@ -77,47 +81,106 @@
 
                         <div class="mb-4">
                             <label for="description" class="form-label">Additional Notes</label>
-                            <InputTextArea id="description" class="form-control" @bind-Value="appointmentModel.Description" 
-                                         placeholder="Any special requirements or notes for your appointment..." rows="3" />
+                            <InputTextArea id="description" class="form-control" @bind-Value="appointmentModel.Description"
+                                           placeholder="Any special requirements or notes for your appointment..." rows="3" />
                             <div class="form-text">Optional: Include any specific requirements or questions you have.</div>
                         </div>
 
                         <div class="mb-4">
-                            <h5>Appointment Address</h5>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label for="street" class="form-label">Street Address <span class="text-danger">*</span></label>
-                                    <InputText id="street" class="form-control" @bind-Value="appointmentModel.Street" 
-                                             placeholder="123 Main Street" />
-                                    <ValidationMessage For="@(() => appointmentModel.Street)" class="text-danger" />
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="city" class="form-label">City <span class="text-danger">*</span></label>
-                                    <InputText id="city" class="form-control" @bind-Value="appointmentModel.City" 
-                                             placeholder="City name" />
-                                    <ValidationMessage For="@(() => appointmentModel.City)" class="text-danger" />
+                            <h5>Appointment Location</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Location Type <span class="text-danger">*</span></label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="locationType" id="homeLocation"
+                                                   @onchange="() => OnLocationTypeChanged(true)" checked="@appointmentModel.UseHomeAddress" />
+                                            <label class="form-check-label" for="homeLocation">
+                                                <i class="fas fa-home me-2"></i>Use My Home Address
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="locationType" id="facilityLocation"
+                                                   @onchange="() => OnLocationTypeChanged(false)" checked="@(!appointmentModel.UseHomeAddress)" />
+                                            <label class="form-check-label" for="facilityLocation">
+                                                <i class="fas fa-hospital me-2"></i>Visit Lab/Clinic
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            @* <div class="row mt-3"> *@
-                            @*     <div class="col-md-4"> *@
-                            @*         <label for="state" class="form-label">State <span class="text-danger">*</span></label> *@
-                            @*         <InputText id="state" class="form-control" @bind-Value="appointmentModel.State"  *@
-                            @*                  placeholder="State" /> *@
-                            @*         <ValidationMessage For="@(() => appointmentModel.State)" class="text-danger" /> *@
-                            @*     </div> *@
-                            @*     <div class="col-md-4"> *@
-                            @*         <label for="zipCode" class="form-label">ZIP Code <span class="text-danger">*</span></label> *@
-                            @*         <InputText id="zipCode" class="form-control" @bind-Value="appointmentModel.ZipCode"  *@
-                            @*                  placeholder="12345" /> *@
-                            @*         <ValidationMessage For="@(() => appointmentModel.ZipCode)" class="text-danger" /> *@
-                            @*     </div> *@
-                            @*     <div class="col-md-4"> *@
-                            @*         <label for="country" class="form-label">Country <span class="text-danger">*</span></label> *@
-                            @*         <InputText id="country" class="form-control" @bind-Value="appointmentModel.Country"  *@
-                            @*                  placeholder="United States" /> *@
-                            @*         <ValidationMessage For="@(() => appointmentModel.Country)" class="text-danger" /> *@
-                            @*     </div> *@
-                            @* </div> *@
+
+                            @if (appointmentModel.UseHomeAddress)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Select Home Address <span class="text-danger">*</span></label>
+                                    <InputSelect class="form-select" @bind-Value="appointmentModel.AddressId">
+                                        <option value="">Choose your home address...</option>
+                                        @foreach (var address in customerAddresses)
+                                        {
+                                            <option value="@address.Id">
+                                                @address.Street, @(!string.IsNullOrEmpty(address.Ward) ? $"{address.Ward}, " : "")@address.District, @address.Province
+                                            </option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => appointmentModel.AddressId)" class="text-danger" />
+                                    @if (!customerAddresses.Any())
+                                    {
+                                        <div class="alert alert-info mt-2">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            You don't have any home addresses saved.
+                                            <a href="/account/addresses/create" class="alert-link">Add a home address</a> first.
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Select Lab/Clinic <span class="text-danger">*</span></label>
+                                    <InputSelect class="form-select" @bind-Value="appointmentModel.AddressId">
+                                        <option value="">Choose a lab or clinic...</option>
+                                        @foreach (var address in facilityAddresses)
+                                        {
+                                            <option value="@address.Id">
+                                                @address.LocationType - @address.Street, @address.District, @address.Province
+                                                @if (!string.IsNullOrEmpty(address.OpeningHours))
+                                                {
+                                                    <text> (Hours: @address.OpeningHours)</text>
+                                                }
+                                            </option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => appointmentModel.AddressId)" class="text-danger" />
+                                </div>
+                            }
+
+                            @if (selectedAddress != null)
+                            {
+                                <div class="alert alert-light">
+                                    <h6><i class="fas fa-map-marker-alt me-2"></i>Selected Location:</h6>
+                                    <p class="mb-1"><strong>@selectedAddress.Street</strong></p>
+                                    @if (!string.IsNullOrEmpty(selectedAddress.Ward))
+                                    {
+                                        <p class="mb-1">@selectedAddress.Ward, @selectedAddress.District</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="mb-1">@selectedAddress.District</p>
+                                    }
+                                    <p class="mb-1">@selectedAddress.Province</p>
+                                    @if (!string.IsNullOrEmpty(selectedAddress.OpeningHours))
+                                    {
+                                        <p class="mb-0"><strong>Hours:</strong> @selectedAddress.OpeningHours</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(selectedAddress.Notes))
+                                    {
+                                        <p class="mb-0"><strong>Notes:</strong> @selectedAddress.Notes</p>
+                                    }
+                                </div>
+                            }
                         </div>
 
                         <div class="d-flex gap-2">
@@ -148,7 +211,7 @@
                     <div class="card-body">
                         <h6 class="text-primary">@selectedService.ServiceName</h6>
                         <p class="text-muted small mb-3">@selectedService.Description</p>
-                        
+
                         <div class="d-flex justify-content-between mb-2">
                             <span>Service Price:</span>
                             <strong class="text-success">$@selectedService.Price.ToString("F2")</strong>
@@ -184,12 +247,24 @@
             <div class="card shadow-sm mt-3">
                 <div class="card-body">
                     <h6><i class="fas fa-info-circle text-info me-2"></i>What to Expect</h6>
-                    <ul class="small mb-0">
-                        <li>Our technician will arrive at your specified address</li>
-                        <li>Sample collection takes approximately 15-30 minutes</li>
-                        <li>You'll receive a confirmation email with tracking information</li>
-                        <li>Results will be available in your online portal</li>
-                    </ul>
+                    @if (appointmentModel.UseHomeAddress)
+                    {
+                        <ul class="small mb-0">
+                            <li>Our technician will arrive at your specified address</li>
+                            <li>Sample collection takes approximately 15-30 minutes</li>
+                            <li>You'll receive a confirmation email with tracking information</li>
+                            <li>Results will be available in your online portal</li>
+                        </ul>
+                    }
+                    else
+                    {
+                        <ul class="small mb-0">
+                            <li>Visit the selected lab or clinic at your scheduled time</li>
+                            <li>Bring a valid ID and your appointment confirmation</li>
+                            <li>Sample collection takes approximately 15-30 minutes</li>
+                            <li>Results will be available in your online portal</li>
+                        </ul>
+                    }
                 </div>
             </div>
         </div>
@@ -198,15 +273,20 @@
 
 @code {
     private User user = default!;
+
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
+
     [Parameter] public int? ServiceId { get; set; }
-    
+
     private AppointmentBookingModel appointmentModel = new();
     private List<Service> availableServices = new();
+    private List<Address> customerAddresses = new();
+    private List<Address> facilityAddresses = new();
+    private Address? selectedAddress;
     private Service? selectedService;
     private bool isSubmitting = false;
-    
+
     private List<string> availableTimeSlots = new()
     {
         "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
@@ -215,19 +295,42 @@
 
     protected override async Task OnInitializedAsync()
     {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        await LoadServices();
-        
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var claimsUser = authState.User;
+
+        if (!claimsUser.Identity?.IsAuthenticated ?? true)
+        {
+            Navigation.NavigateTo("/account/login", true);
+            return;
+        }
+
+        var userId = claimsUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        user = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+        await LoadData();
+
         if (ServiceId.HasValue)
         {
             selectedService = availableServices.FirstOrDefault(s => s.Id == ServiceId.Value);
             appointmentModel.ServiceId = ServiceId.Value;
         }
+
+        appointmentModel.UseHomeAddress = true; // Default to home address
     }
 
-    private async Task LoadServices()
+    private async Task LoadData()
     {
         availableServices = await DbContext.Services.ToListAsync();
+
+        // Load customer's home addresses
+        customerAddresses = await DbContext.Addresses
+            .Where(a => a.UserId == user.Id && a.LocationType == LocationType.Home)
+            .ToListAsync();
+
+        // Load available lab and clinic addresses
+        facilityAddresses = await DbContext.Addresses
+            .Where(a => (a.LocationType == LocationType.Lab || a.LocationType == LocationType.Clinic) && !a.IsDeleted)
+            .ToListAsync();
     }
 
     private async Task OnServiceChanged(ChangeEventArgs e)
@@ -242,39 +345,68 @@
         }
     }
 
+    private async Task OnLocationTypeChanged(bool useHomeAddress)
+    {
+        appointmentModel.UseHomeAddress = useHomeAddress;
+        appointmentModel.AddressId = 0; // Reset selected address
+        selectedAddress = null;
+        StateHasChanged();
+    }
+
+    private async Task OnAddressChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int addressId))
+        {
+            if (appointmentModel.UseHomeAddress)
+            {
+                selectedAddress = customerAddresses.FirstOrDefault(a => a.Id == addressId);
+            }
+            else
+            {
+                selectedAddress = facilityAddresses.FirstOrDefault(a => a.Id == addressId);
+            }
+        }
+        else
+        {
+            selectedAddress = null;
+        }
+        StateHasChanged();
+    }
+
     private async Task HandleValidSubmit()
     {
         isSubmitting = true;
-        
         try
         {
-            // Create address
-            var address = new Address
+            // Get the selected address
+            var address = await DbContext.Addresses.FindAsync(appointmentModel.AddressId);
+            if (address == null)
             {
-                Street = appointmentModel.Street,
-                City = appointmentModel.City,
-                ZipCode = appointmentModel.ZipCode,
-            };
+                await JSRuntime.InvokeVoidAsync("alert", "Please select a valid address.");
+                return;
+            }
 
-            DbContext.Addresses.Add(address);
-            await DbContext.SaveChangesAsync();
-
-            // Create appointment
             var appointment = new Appointment
+                {
+                    ScheduledAt = appointmentModel.ScheduledDate!.Value.Date.Add(TimeSpan.Parse(ConvertTo24Hour(appointmentModel.ScheduledTime))),
+                    Description = appointmentModel.Description ?? "",
+                    Status = AppointmentStatus.Scheduled,
+                    UserId = user.Id,
+                    ServiceId = appointmentModel.ServiceId,
+                    AddressId = appointmentModel.AddressId
+                };
+
+            var success = await AppointmentService.BookAppointmentAsync(appointment);
+
+            if (success)
             {
-                ScheduledAt = appointmentModel.ScheduledDate.Value.Date.Add(TimeSpan.Parse(ConvertTo24Hour(appointmentModel.ScheduledTime))),
-                Description = appointmentModel.Description ?? "",
-                Status = AppointmentStatus.Scheduled,
-                AddressId = address.Id,
-                UserId = user.Id,
-                ServiceId = appointmentModel.ServiceId
-            };
-
-            DbContext.Appointments.Add(appointment);
-            await DbContext.SaveChangesAsync();
-
-            await JSRuntime.InvokeVoidAsync("alert", "Appointment booked successfully!");
-            Navigation.NavigateTo("/appointments");
+                await JSRuntime.InvokeVoidAsync("alert", "Appointment booked successfully!");
+                Navigation.NavigateTo("/appointments");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "The selected time slot is already booked. Please choose another time.");
+            }
         }
         catch (Exception ex)
         {
@@ -308,19 +440,9 @@
 
         public string? Description { get; set; }
 
-        [Required(ErrorMessage = "Street address is required")]
-        public string Street { get; set; } = "";
+        [Required(ErrorMessage = "Please select an address")]
+        public int AddressId { get; set; }
 
-        [Required(ErrorMessage = "City is required")]
-        public string City { get; set; } = "";
-
-        [Required(ErrorMessage = "State is required")]
-        public string State { get; set; } = "";
-
-        [Required(ErrorMessage = "ZIP code is required")]
-        public string ZipCode { get; set; } = "";
-
-        [Required(ErrorMessage = "Country is required")]
-        public string Country { get; set; } = "United States";
+        public bool UseHomeAddress { get; set; } = true;
     }
 }

@@ -1,13 +1,15 @@
-@page "/feedback"
+@rendermode InteractiveServer
+@page "/feedback/index"
 @using Microsoft.EntityFrameworkCore
 @using Data.Entities
 @using Data.Enum
 @using Microsoft.AspNetCore.Authorization
-@using System.Security.Claims;
 @using Web.Components.Account
+
+@inject IHttpContextAccessor HttpContextAccessor
 @inject IdentityUserAccessor UserAccessor
 @inject Data.AppDbContext DbContext
-@attribute [Authorize(Roles = "Customer")]
+@attribute [Authorize(Roles = "Customer,Admin")]
 
 <PageTitle>My Feedback</PageTitle>
 
@@ -22,8 +24,12 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <div class="input-group">
-                <input type="text" class="form-control" placeholder="Search feedback..." @bind="searchTerm" @oninput="FilterFeedback">
-                <button class="btn btn-outline-secondary" type="button">
+                <input type="text"
+                       class="form-control"
+                       placeholder="Search feedback..."
+                       @bind="SearchTerm"
+                       @bind:event="oninput" />
+                <button class="btn btn-outline-secondary" type="button" @onclick="FilterFeedback">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
@@ -57,24 +63,22 @@
                                     <span class="badge @GetFeedbackStatusBadgeClass(feedback.Status)">
                                         @feedback.Status
                                     </span>
-                                    <br>
+                                    <br />
                                     <small class="text-muted">@feedback.CreatedAt.ToString("MMM dd, yyyy")</small>
                                 </div>
                             </div>
-                            
                             <p class="card-text">
-                                @(feedback.Message.Length > 150 ? feedback.Message.Substring(0, 150) + "..." : feedback.Message)
+                                @(feedback.Message.Length > 150 ? feedback.Message[..150] + "..." : feedback.Message)
                             </p>
-                            
                             <div class="d-flex gap-2 mt-auto">
                                 <a href="/feedback/@feedback.Id" class="btn btn-outline-primary btn-sm">
                                     View Details
                                 </a>
                                 @if (feedback.Status == FeedbackStatus.Pending)
                                 {
-                                    <button class="btn btn-outline-secondary btn-sm">
+                                    <a href="/feedback/edit/@feedback.Id" class="btn btn-outline-primary btn-sm">
                                         Edit
-                                    </button>
+                                    </a>
                                 }
                             </div>
                         </div>
@@ -98,25 +102,43 @@
     private User user = default!;
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
+
     private List<Feedback> feedback = new();
     private List<Feedback> filteredFeedback = new();
-    private string searchTerm = "";
-    private string selectedStatus = "";
+
+    private string searchTermBacking = string.Empty;
+    private string SearchTerm
+    {
+        get => searchTermBacking;
+        set
+        {
+            if (searchTermBacking != value)
+            {
+                searchTermBacking = value;
+                FilterFeedback();
+            }
+        }
+    }
+
+    private string selectedStatus = string.Empty;
     public string SelectedStatus
     {
         get => selectedStatus;
         set
         {
-            selectedStatus = value;
-            FilterFeedback();
+            if (selectedStatus != value)
+            {
+                selectedStatus = value;
+                FilterFeedback();
+            }
         }
     }
 
     protected override async Task OnInitializedAsync()
     {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        user = await UserAccessor.GetRequiredUserAsync(HttpContextAccessor.HttpContext);
         await LoadFeedback();
-        filteredFeedback = feedback.ToList();
+        FilterFeedback();
     }
 
     private async Task LoadFeedback()
@@ -129,33 +151,30 @@
 
     private void FilterFeedback()
     {
-        filteredFeedback = feedback.Where(f =>
-            (string.IsNullOrEmpty(selectedStatus) || f.Status.ToString() == selectedStatus) &&
-            (string.IsNullOrEmpty(searchTerm) || 
-             f.Message.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-        ).ToList();
+        filteredFeedback = feedback
+            .Where(f =>
+                (string.IsNullOrWhiteSpace(selectedStatus) || f.Status.ToString().Equals(selectedStatus, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(SearchTerm) || f.Message.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+            )
+            .ToList();
+
+        StateHasChanged();
     }
 
-    private string GetFeedbackTypeBadgeClass(FeedbackType type)
+    private string GetFeedbackTypeBadgeClass(FeedbackType type) => type switch
     {
-        return type switch
-        {
-            FeedbackType.Service => "bg-primary",
-            FeedbackType.Appointment => "bg-info",
-            FeedbackType.General => "bg-secondary",
-            _ => "bg-secondary"
-        };
-    }
+        FeedbackType.Service => "bg-primary",
+        FeedbackType.Appointment => "bg-info",
+        FeedbackType.General => "bg-secondary",
+        _ => "bg-secondary"
+    };
 
-    private string GetFeedbackStatusBadgeClass(FeedbackStatus status)
+    private string GetFeedbackStatusBadgeClass(FeedbackStatus status) => status switch
     {
-        return status switch
-        {
-            FeedbackStatus.Pending => "bg-warning",
-            FeedbackStatus.Reviewed => "bg-info",
-            FeedbackStatus.Resolved => "bg-success",
-            FeedbackStatus.Closed => "bg-secondary",
-            _ => "bg-secondary"
-        };
-    }
+        FeedbackStatus.Pending => "bg-warning",
+        FeedbackStatus.Reviewed => "bg-info",
+        FeedbackStatus.Resolved => "bg-success",
+        FeedbackStatus.Closed => "bg-secondary",
+        _ => "bg-secondary"
+    };
 }
