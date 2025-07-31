@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Data.Entities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Repositories.UnitOfWork;
 using Services.Interfaces;
@@ -17,7 +16,6 @@ namespace Services.Services
 
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<User> _userManager;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
 
         public FeedbackService(IUnitOfWork unitOfWork,

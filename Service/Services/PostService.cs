@@ -2,12 +2,6 @@
 using Data.Entities;
 using Repositories.UnitOfWork;
 using Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +12,6 @@ namespace Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<User> _userManager;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
 
         public PostService(IUnitOfWork unitOfWork, 

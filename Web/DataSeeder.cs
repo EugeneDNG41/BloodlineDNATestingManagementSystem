@@ -27,14 +27,17 @@ namespace Web
 
             // Create admin user if it doesn't exist
             string adminEmail = "admin@admin.com";
-            string adminPassword = "Admin@123";
+            string adminPassword = "123";
             await CreateUserAsync(userManager, adminEmail, adminPassword, "Admin");
             string managerEmail = "manager@manager.com";
-            string managerPassword = "Manager@123";
+            string managerPassword = "123";
             await CreateUserAsync(userManager, managerEmail, managerPassword, "Manager");
             string staffEmail = "staff@staff.com";
-            string staffPassword = "Staff@123";
+            string staffPassword = "123";
             await CreateUserAsync(userManager, staffEmail, staffPassword, "Staff");
+            string customerEmail = "customer@customer.com";
+            string customerPassword = "123";
+            await CreateUserAsync(userManager, customerEmail, customerPassword, "Customer");
 
             return service;
         }
@@ -49,7 +52,10 @@ namespace Web
                     FullName = email.Split('@')[0],
                     UserName = email,
                     Email = email,
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    DateOfBirth = DateTime.UtcNow.AddYears(-18),
+                    Gender = "Male",
+                    PhoneNumber = "1234567890", // Default phone number, can be changed later
                 };
                 var result = await userManager.CreateAsync(user, password);
                 if (result.Succeeded)
