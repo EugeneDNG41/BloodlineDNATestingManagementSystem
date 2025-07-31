@@ -30,9 +30,7 @@ namespace Web
             builder.Services.AddScoped<IAppointmentService, AppointmentService>();
             builder.Services.AddScoped<IFeedbackService, FeedbackService>();
             builder.Services.AddScoped<IPostService, PostService>();
-            builder.Services.AddScoped<IResultService, ResultService>();
             builder.Services.AddScoped<IReviewService, ReviewService>();
-            builder.Services.AddScoped<ISampleService, SampleService>();
             builder.Services.AddScoped<IServiceService, ServiceService>();
             builder.Services.AddScoped<IUserService, UserService>();
 

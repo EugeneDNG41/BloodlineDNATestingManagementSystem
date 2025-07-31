@@ -18,8 +18,6 @@ namespace Data
         }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Address> Addresses { get; set; }
-        public DbSet<Result> Results { get; set; }
-        public DbSet<Sample> Samples { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
@@ -43,26 +41,6 @@ namespace Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            // Cấu hình quan hệ cho Sample
-            modelBuilder.Entity<Sample>()
-                .HasOne(a => a.Collector)
-                .WithMany(u => u.SamplesCollected)
-                .HasForeignKey(a => a.CollectorId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Sample>()
-                .HasOne(a => a.Donor)
-                .WithMany(u => u.SamplesDonated)
-                .HasForeignKey(a => a.DonorId)
-                .OnDelete(DeleteBehavior.Restrict); // Ngăn chặn xóa User nếu vẫn còn Sample trong hệ thống
-
-            // Cấu hình quan hệ cho Result và Sample
-            modelBuilder.Entity<Result>()
-                .HasMany(r => r.Samples)
-                .WithOne(s => s.Result)
-                .HasForeignKey(s => s.ResultId)
-                .OnDelete(DeleteBehavior.SetNull); // Xóa 1 Result, Samples liên quan sẽ không xóa, set ResultId = null
             
             // Cấu hình Identity Roles
             modelBuilder.Entity<IdentityRole>().HasData

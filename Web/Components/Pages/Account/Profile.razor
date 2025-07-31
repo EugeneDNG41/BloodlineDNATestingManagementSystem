@@ -44,15 +44,11 @@
                     <p class="text-muted">@currentUser?.Email</p>
 
                     <div class="row text-center mt-4">
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="h5 mb-0">@(currentUser?.Appointments?.Count ?? 0)</div>
                             <small class="text-muted">Appointments</small>
                         </div>
-                        <div class="col-4">
-                            <div class="h5 mb-0">@(currentUser?.Results?.Count ?? 0)</div>
-                            <small class="text-muted">Results</small>
-                        </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="h5 mb-0">@(currentUser?.Reviews?.Count ?? 0)</div>
                             <small class="text-muted">Reviews</small>
                         </div>
@@ -327,7 +323,6 @@
         {
             currentUser = await DbContext.Users
                 .Include(u => u.Appointments)
-                .Include(u => u.Results)
                 .Include(u => u.Reviews)
                 .FirstOrDefaultAsync(u => u.Id == userId);
         }

@@ -22,7 +22,7 @@
 
     <!-- Key Operational Metrics -->
     <div class="row g-4 mb-4">
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-6 col-md-6">
             <div class="card bg-info text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -39,24 +39,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-warning text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <div class="h2 mb-0">@collectedSamples</div>
-                            <div>Collected Samples</div>
-                            <small class="opacity-75">@processingSamples processing</small>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-flask fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-6 col-md-6">
             <div class="card bg-success text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -71,69 +54,9 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-primary text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <div class="h2 mb-0">@completedResults</div>
-                            <div>Results Ready</div>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-clipboard-check fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </div>    
     </div>
-
     <div class="row g-4 mb-4">
-        <!-- Sample Status Overview -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0">Sample Processing Status</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="d-flex align-items-center">
-                                <div class="badge bg-secondary me-2">@collectedSamples</div>
-                                <span class="text-muted">Collected</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center">
-                                <div class="badge bg-info me-2">@receivedSamples</div>
-                                <span class="text-muted">Received</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center">
-                                <div class="badge bg-warning me-2">@processingSamples</div>
-                                <span class="text-muted">Processing</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center">
-                                <div class="badge bg-success me-2">@completedSamples</div>
-                                <span class="text-muted">Completed</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center">
-                                <div class="badge bg-danger me-2">@rejectedSamples</div>
-                                <span class="text-muted">Rejected</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Recent Activity -->
         <div class="col-lg-6">
             <div class="card shadow-sm">
@@ -203,14 +126,8 @@
 @code {
     private int todayAppointments;
     private int upcomingAppointments;
-    private int collectedSamples;
-    private int receivedSamples;
-    private int processingSamples;
-    private int completedSamples;
-    private int rejectedSamples;
     private int activeStaff;
     private int totalStaff;
-    private int completedResults;
 
     private List<Appointment> todaySchedule = new();
     private List<AlertItem> alerts = new();
@@ -219,7 +136,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadDashboardData();
-        LoadAlerts();
         LoadRecentActivities();
     }
 
@@ -235,30 +151,12 @@
         upcomingAppointments = await DbContext.Appointments
             .CountAsync(a => a.ScheduledAt > now && a.Status == AppointmentStatus.Scheduled);
 
-        // Load sample metrics using the correct enum values
-        collectedSamples = await DbContext.Samples
-            .CountAsync(s => s.Status == SampleStatus.Collected);
-
-        receivedSamples = await DbContext.Samples
-            .CountAsync(s => s.Status == SampleStatus.Received);
-
-        processingSamples = await DbContext.Samples
-            .CountAsync(s => s.Status == SampleStatus.Processing);
-
-        completedSamples = await DbContext.Samples
-            .CountAsync(s => s.Status == SampleStatus.Completed);
-
-        rejectedSamples = await DbContext.Samples
-            .CountAsync(s => s.Status == SampleStatus.Rejected);
 
         // Load staff metrics
         var staffUsers = await UserManager.GetUsersInRoleAsync("Staff");
         totalStaff = staffUsers.Count;
         activeStaff = staffUsers.Count(u => !u.LockoutEnd.HasValue || u.LockoutEnd <= DateTime.UtcNow);
 
-        // Load result metrics
-        completedResults = await DbContext.Results
-            .CountAsync(r => !r.IsDeleted);
 
         // Load today's schedule
         todaySchedule = await DbContext.Appointments
@@ -269,35 +167,6 @@
             .ToListAsync();
     }
 
-    private void LoadAlerts()
-    {
-        alerts = new List<AlertItem>();
-
-        if (collectedSamples > 10)
-        {
-            alerts.Add(new AlertItem { Type = "warning", Icon = "exclamation-triangle", Message = $"{collectedSamples} samples awaiting processing" });
-        }
-
-        if (rejectedSamples > 0)
-        {
-            alerts.Add(new AlertItem { Type = "danger", Icon = "times-circle", Message = $"{rejectedSamples} samples rejected - review required" });
-        }
-
-        if (upcomingAppointments == 0)
-        {
-            alerts.Add(new AlertItem { Type = "info", Icon = "info-circle", Message = "No upcoming appointments scheduled" });
-        }
-
-        if (completedResults > 5)
-        {
-            alerts.Add(new AlertItem { Type = "success", Icon = "check-circle", Message = $"{completedResults} results ready for delivery" });
-        }
-
-        if (processingSamples > 20)
-        {
-            alerts.Add(new AlertItem { Type = "warning", Icon = "clock", Message = $"High processing load: {processingSamples} samples in progress" });
-        }
-    }
 
     private void LoadRecentActivities()
     {

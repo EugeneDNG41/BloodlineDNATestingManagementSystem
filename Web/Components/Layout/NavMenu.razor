@@ -52,17 +52,6 @@
                             </NavLink>
                         </div>
 
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="results">
-                                <i class="fas fa-file-medical me-2"></i> My Results
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="samples">
-                                <i class="fas fa-microscope me-2"></i> Sample Tracking
-                            </NavLink>
-                        </div>
 
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="feedback/index">
@@ -78,7 +67,7 @@
                     </Authorized>
                 </AuthorizeView>
 
-                <!-- Staff Navigation -->
+                @*<!-- Staff Navigation -->
                 <AuthorizeView Roles="Staff" Context="staffAuth">
                     <Authorized>
 
@@ -95,7 +84,7 @@
 
                        
                     </Authorized>
-                </AuthorizeView>
+                </AuthorizeView>*@
 
                 <!-- Manager Navigation -->
                 <AuthorizeView Roles="Manager" Context="managerAuth">

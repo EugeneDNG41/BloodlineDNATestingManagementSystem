@@ -20,7 +20,5 @@ namespace Data.Entities
         public virtual User User { get; set; }
         public int ServiceId { get; set; }
         public virtual Service Service { get; set; }
-        public int? SampleId { get; set; }
-        public virtual Sample Sample { get; set; }
     }
 }

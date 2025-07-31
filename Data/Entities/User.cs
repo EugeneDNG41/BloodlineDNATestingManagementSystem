@@ -20,8 +20,5 @@ namespace Data.Entities
         public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
         public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
         public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
-        public virtual ICollection<Sample> SamplesCollected { get; set; } = new List<Sample>();
-        public virtual ICollection<Sample> SamplesDonated { get; set; } = new List<Sample>();
-        public virtual ICollection<Result> Results { get; set; } = new List<Result>();
     }
 }

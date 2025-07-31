@@ -82,35 +82,7 @@
                             </div>
                         }
 
-                        @if (appointment.Sample != null)
-                        {
-                            <div class="mb-4">
-                                <h6>Sample Information</h6>
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <p class="mb-1"><strong>Collection Method:</strong> @appointment.Sample.CollectionMethod</p>
-                                                <p class="mb-1"><strong>Sample Type:</strong> @appointment.Sample.Type</p>
-                                                <p class="mb-0">
-                                                    <strong>Status:</strong>
-                                                    <span class="badge @GetSampleStatusBadgeClass(appointment.Sample.Status)">
-                                                        @appointment.Sample.Status
-                                                    </span>
-                                                </p>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <p class="mb-1"><strong>Collection Date:</strong> @appointment.Sample.CollectionDate.ToString("MMM dd, yyyy")</p>
-                                                @if (appointment.Sample.ReceivedDate.HasValue)
-                                                {
-                                                    <p class="mb-0"><strong>Received Date:</strong> @appointment.Sample.ReceivedDate.Value.ToString("MMM dd, yyyy")</p>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
+                        
                     </div>
                 </div>
             </div>
@@ -190,7 +162,6 @@ else
         appointment = await DbContext.Appointments
             .Include(a => a.Service)
             .Include(a => a.Address)
-            .Include(a => a.Sample)
             .FirstOrDefaultAsync(a => a.Id == Id);
     }
 
