@@ -1,0 +1,112 @@
+﻿@page "/admin/samples"
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@using global::Services.Interfaces
+@inject ISampleService SampleService
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin,Manager,Staff")]
+
+<PageTitle>Sample Management</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Sample Management</h1>
+    </div>
+
+    @if (allSamples is null)
+    {
+        <p><em>Loading samples...</em></p>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sample ID</th>
+                                <th>Donor</th>
+                                <th>Collection Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var sample in allSamples)
+                            {
+                                <tr>
+                                    <td><strong>@sample.Id.ToString("D6")</strong></td>
+                                    <td>@sample.Donor?.FullName</td>
+                                    <td>@sample.CollectionDate.ToString("g")</td>
+                                    <td>
+                                        <span class="badge @GetSampleStatusBadgeClass(sample.Status)">
+                                            @sample.Status
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-edit me-1"></i> Update Status
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                @foreach (SampleStatus status in Enum.GetValues(typeof(SampleStatus)))
+                                                {
+                                                    <li>
+                                                        <button class="dropdown-item" @onclick="() => UpdateStatus(sample.Id, status)">
+                                                            Set to @status
+                                                        </button>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Sample>? allSamples;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSamples();
+    }
+
+    private async Task LoadSamples()
+    {
+        var result = await SampleService.GetAllSamplesAsync();
+        if (result is not null)
+        {
+            allSamples = result.ToList();
+        }
+    }
+
+    private async Task UpdateStatus(int sampleId, SampleStatus newStatus)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to update sample {sampleId:D6} to '{newStatus}'?");
+        if (confirmed)
+        {
+            await SampleService.UpdateSampleStatusAsync(sampleId, newStatus);
+            await LoadSamples(); // Refresh the list
+            StateHasChanged(); // Tell Blazor to re-render the component
+        }
+    }
+
+    private string GetSampleStatusBadgeClass(SampleStatus status) => status switch
+    {
+        SampleStatus.Collected => "bg-info text-dark",
+        SampleStatus.Received => "bg-primary",
+        SampleStatus.Processing => "bg-warning text-dark",
+        SampleStatus.Completed => "bg-success",
+        SampleStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
+}

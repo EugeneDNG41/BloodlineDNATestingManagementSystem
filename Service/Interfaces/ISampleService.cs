@@ -1,4 +1,5 @@
 ﻿using Data.Entities;
+using Data.Enum;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,13 @@ namespace Services.Interfaces
 {
     public interface ISampleService
     {
+        // === For Customer ===
         Task<IEnumerable<Sample>> GetSamplesByDonorIdAsync(string donorId);
         Task<Sample?> GetSampleDetailsAsync(int sampleId, string donorId);
+
+        // === For Staff/Admin ===
+        Task<IEnumerable<Sample>> GetAllSamplesAsync();
+        Task<Sample?> GetSampleByIdAsync(int sampleId);
+        Task UpdateSampleStatusAsync(int sampleId, SampleStatus newStatus);
     }
 }
