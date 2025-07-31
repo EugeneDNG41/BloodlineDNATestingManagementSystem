@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250730174211_Fix_Sample_Cascade_Path")]
-    partial class Fix_Sample_Cascade_Path
+    [Migration("20250731055113_inut")]
+    partial class inut
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,10 +32,6 @@ namespace Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("District")
                         .IsRequired()
@@ -474,6 +470,9 @@ namespace Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Gender")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -555,25 +554,25 @@ namespace Data.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "b0949f91-aecd-4d35-a2a5-1be9349ddbc2",
+                            Id = "a26d7e00-2c3f-44da-b5e7-a018bc4d07dc",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "69d9c983-784f-4ddf-a395-aa85040c6cb3",
+                            Id = "e7380c04-55dc-4587-9fff-a65b317c16d8",
                             Name = "Manager",
                             NormalizedName = "MANAGER"
                         },
                         new
                         {
-                            Id = "5e841e34-98d5-41ad-a36b-dbf2069c0009",
+                            Id = "bb0d3352-cb53-436f-9f36-e765c7e5c755",
                             Name = "Staff",
                             NormalizedName = "STAFF"
                         },
                         new
                         {
-                            Id = "9f5b82a8-38f5-4bf4-bafa-04f8cbfedda4",
+                            Id = "900c9324-6705-47fa-b6b1-4ab4a6dd5ad7",
                             Name = "Customer",
                             NormalizedName = "CUSTOMER"
                         });

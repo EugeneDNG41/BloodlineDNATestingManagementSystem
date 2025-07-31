@@ -31,14 +31,14 @@ namespace Data
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json")
                 .Build();
-            return configuration.GetConnectionString("MySQLConnection");
+            return configuration.GetConnectionString("MSSQLConnection");
         }
-        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        //=> optionsBuilder.UseSqlServer(GetConnectionString());
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured) optionsBuilder.UseMySql(GetConnectionString(), ServerVersion.Parse("8.0.37-mysql"));
-        }
+        => optionsBuilder.UseSqlServer(GetConnectionString());
+        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        //{
+        //    if (!optionsBuilder.IsConfigured) optionsBuilder.UseMySql(GetConnectionString(), ServerVersion.Parse("8.0.37-mysql"));
+        //}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

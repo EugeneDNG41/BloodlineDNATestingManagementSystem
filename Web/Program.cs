@@ -48,13 +48,13 @@ namespace Web
             })
                 .AddIdentityCookies();
 
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                 options.UseMySql(builder.Configuration.GetConnectionString("MySQLConnection"),
-                 new MySqlServerVersion(new Version(8, 0, 37))));
             //builder.Services.AddDbContext<AppDbContext>(options =>
-            //{
-            //    options.UseSqlServer(builder.Configuration.GetConnectionString("MSSQLConnection"));
-            //});
+                 //options.UseMySql(builder.Configuration.GetConnectionString("MySQLConnection"),
+                 //new MySqlServerVersion(new Version(8, 0, 37))));
+            builder.Services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseSqlServer(builder.Configuration.GetConnectionString("MSSQLConnection"));
+            });
 
             builder.Services.AddQuickGridEntityFrameworkAdapter();
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();

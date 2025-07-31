@@ -1,0 +1,155 @@
+﻿@page "/staff/samples/edit/{id:int}"
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@using global::Services.Interfaces
+@inject ISampleService SampleService
+@inject UserManager<User> UserManager
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Manager,Staff")]
+
+<PageTitle>Edit Sample</PageTitle>
+
+<div class="container py-4">
+    <h1 class="h2 mb-4">Edit Sample ID: @Id</h1>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            @if (isLoading || InputModel is null)
+            {
+                <p><em>Loading...</em></p>
+            }
+            else
+            {
+                <EditForm Model="InputModel" OnValidSubmit="HandleValidSubmit" FormName="EditSample">
+                    <DataAnnotationsValidator />
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Donor (Customer)</label>
+                            <InputSelect @bind-Value="InputModel.DonorId" class="form-select">
+                                <option value="">Select a customer...</option>
+                                @foreach (var user in customerList)
+                                {
+                                    <option value="@user.Id">@user.FullName (@user.Email)</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => InputModel.DonorId)" class="text-danger" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Collector (Staff)</label>
+                            <InputSelect @bind-Value="InputModel.CollectorId" class="form-select">
+                                <option value="">Select a staff member...</option>
+                                @foreach (var user in staffList)
+                                {
+                                    <option value="@user.Id">@user.FullName</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => InputModel.CollectorId)" class="text-danger" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sample Type</label>
+                            <InputSelect @bind-Value="InputModel.Type" class="form-select">
+                                @foreach (SampleType type in Enum.GetValues(typeof(SampleType)))
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Collection Method</label>
+                            <InputSelect @bind-Value="InputModel.CollectionMethod" class="form-select">
+                                @foreach (SampleCollectionMethod method in Enum.GetValues(typeof(SampleCollectionMethod)))
+                                {
+                                    <option value="@method">@method</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Collection Date</label>
+                        <InputDate @bind-Value="InputModel.CollectionDate" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <InputTextArea @bind-Value="InputModel.Notes" class="form-control" rows="4" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update Sample</button>
+                    <a href="/staff/samples" class="btn btn-secondary">Cancel</a>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private SampleInputModel? InputModel;
+    private List<User> customerList = new();
+    private List<User> staffList = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var customers = await UserManager.GetUsersInRoleAsync("Customer");
+        customerList = customers.ToList();
+
+        var staffAndManager = (await UserManager.GetUsersInRoleAsync("Staff")).ToList();
+        staffAndManager.AddRange((await UserManager.GetUsersInRoleAsync("Manager")));
+        staffList = staffAndManager.Distinct().ToList();
+
+        var sample = await SampleService.GetSampleByIdAsync(Id);
+        if (sample != null)
+        {
+            InputModel = new SampleInputModel
+            {
+                DonorId = sample.DonorId,
+                CollectorId = sample.CollectorId,
+                Type = sample.Type,
+                CollectionMethod = sample.CollectionMethod,
+                CollectionDate = sample.CollectionDate,
+                Notes = sample.Notes ?? ""
+            };
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (InputModel is not null)
+        {
+            var sampleToUpdate = await SampleService.GetSampleByIdAsync(Id);
+            if (sampleToUpdate != null)
+            {
+                sampleToUpdate.DonorId = InputModel.DonorId;
+                sampleToUpdate.CollectorId = InputModel.CollectorId;
+                sampleToUpdate.Type = InputModel.Type;
+                sampleToUpdate.CollectionMethod = InputModel.CollectionMethod;
+                sampleToUpdate.CollectionDate = InputModel.CollectionDate;
+                sampleToUpdate.Notes = InputModel.Notes;
+                await SampleService.UpdateSampleAsync(sampleToUpdate);
+                NavigationManager.NavigateTo("/staff/samples");
+            }
+        }
+    }
+
+    public class SampleInputModel
+    {
+        [Required(ErrorMessage = "Please select a donor.")]
+        public string DonorId { get; set; } = "";
+        [Required(ErrorMessage = "Please select a collector.")]
+        public string CollectorId { get; set; } = "";
+        public SampleType Type { get; set; }
+        public SampleCollectionMethod CollectionMethod { get; set; }
+        public DateTime CollectionDate { get; set; } = DateTime.Today;
+        [StringLength(500)]
+        public string Notes { get; set; } = "";
+    }
+}
