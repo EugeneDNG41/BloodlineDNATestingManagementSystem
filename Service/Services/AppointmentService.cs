@@ -37,7 +37,7 @@ namespace Services.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> BookAppointmentAsync(Appointment appointment, Address address)
+        public async Task<bool> BookAppointmentAsync(Appointment appointment)
         {
             try
             {
@@ -54,10 +54,6 @@ namespace Services.Services
                 {
                     return false; // Trả về false để báo hiệu lỗi trùng lịch
                 }
-
-                // Lưu Address trước
-                await _unitOfWork.Repository<Address>().CreateAsync(address);
-                appointment.AddressId = address.Id;
 
                 // Lưu Appointment
                 await appointmentRepo.CreateAsync(appointment);

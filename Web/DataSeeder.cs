@@ -61,6 +61,18 @@ namespace Web
                     throw new Exception($"Failed to create {role} user: " + string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
             }
+            else
+            {
+                // If user already exists, ensure they are in the correct role
+                if (!await userManager.IsInRoleAsync(user, role))
+                {
+                    var result = await userManager.AddToRoleAsync(user, role);
+                    if (!result.Succeeded)
+                    {
+                        throw new Exception($"Failed to add {role} role to existing user: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+                    }
+                }
+            }
         }
     }
 }
