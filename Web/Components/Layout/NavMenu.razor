@@ -86,7 +86,7 @@
                 </AuthorizeView>
 
                 <!-- Manager Navigation -->
-                <AuthorizeView Roles="Manager,Admin" Context="managerAuth">
+                <AuthorizeView Roles="Manager" Context="managerAuth">
                     <Authorized>
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="manager/dashboard">
@@ -103,24 +103,6 @@
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="manager/staff">
                                 <i class="fas fa-user-tie me-2"></i> Staff Management
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="manager/reports">
-                                <i class="fas fa-chart-bar me-2"></i> Reports & Analytics
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="manager/services">
-                                <i class="fas fa-cog me-2"></i> Service Oversight
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="manager/quality">
-                                <i class="fas fa-award me-2"></i> Quality Control
                             </NavLink>
                         </div>
                     </Authorized>
@@ -143,18 +125,6 @@
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/users">
                                 <i class="fas fa-users me-2"></i> User Management
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="admin/system">
-                                <i class="fas fa-server me-2"></i> System Settings
-                            </NavLink>
-                        </div>
-
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="admin/roles">
-                                <i class="fas fa-shield-alt me-2"></i> Role Management
                             </NavLink>
                         </div>
                     </Authorized>
@@ -224,9 +194,12 @@
                 </div>
 
                 <div class="nav-item px-3">
-                    <button type="button" class="nav-link logout-btn" @onclick="Logout">
-                        <i class="fas fa-sign-out-alt me-2"></i> Logout
-                    </button>
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
                 </div>
             </Authorized>
 
@@ -427,8 +400,3 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
-
-<!-- Hidden logout form -->
-<form id="logoutForm" action="/account/logout" method="post" style="display: none;">
-    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-</form>

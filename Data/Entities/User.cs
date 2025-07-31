@@ -12,6 +12,7 @@ namespace Data.Entities
         public string FullName { get; set; }
         public DateTime DateOfBirth { get; set; }        
         public string? ProfilePictureUrl { get; set; }
+        public string? Gender { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public virtual ICollection<Address> Addresses { get; set; } = new List<Address>();

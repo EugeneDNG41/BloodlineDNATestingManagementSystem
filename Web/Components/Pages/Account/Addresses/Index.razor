@@ -1,0 +1,344 @@
+@page "/account/addresses"
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@using Web.Components.Account.Shared
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Roles = "Customer")]
+@inject Data.AppDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<User> UserManager
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>My Addresses</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/account/manage">Account</a></li>
+                    <li class="breadcrumb-item active">My Addresses</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-home me-2"></i>My Addresses</h2>
+                    <p class="text-muted mb-0">Manage your home addresses for sample collection and delivery</p>
+                </div>
+                <a href="/account/addresses/create" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add New Address
+                </a>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Search addresses..." 
+                               @bind="searchTerm" @oninput="FilterAddresses" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="SelectedProvince">
+                        <option value="">All Provinces</option>
+                        @foreach (var province in provinces)
+                        {
+                            <option value="@province">@province</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="SelectedDistrict">
+                        <option value="">All Districts</option>
+                        @foreach (var district in districts)
+                        {
+                            <option value="@district">@district</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading addresses...</p>
+                </div>
+            }
+            else if (!filteredAddresses.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-home fa-3x text-muted mb-3"></i>
+                    <h4>No Addresses Found</h4>
+                    @if (string.IsNullOrEmpty(searchTerm) && string.IsNullOrEmpty(selectedProvince) && string.IsNullOrEmpty(selectedDistrict))
+                    {
+                        <p class="text-muted">You haven't added any addresses yet. Add your first address to get started.</p>
+                        <a href="/account/addresses/create" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add Your First Address
+                        </a>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No addresses match your search criteria.</p>
+                        <button class="btn btn-outline-primary" @onclick="ClearFilters">
+                            <i class="fas fa-times me-2"></i>Clear Filters
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    @foreach (var address in filteredAddresses)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-home me-2 text-primary"></i>Home Address
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <address class="mb-3">
+                                        <strong>@address.Street</strong><br>
+                                        <span class="text-muted">@address.Ward, @address.District, @address.Province, @address.ZipCode</span><br>
+                                    </address>
+                                    
+                                    @if (!string.IsNullOrEmpty(address.Notes))
+                                    {
+                                        <div class="alert alert-light py-2">
+                                            <i class="fas fa-sticky-note me-2 text-muted"></i>
+                                            <small>@address.Notes</small>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="/account/addresses/edit/@address.Id" class="btn btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-outline-danger" @onclick="() => ConfirmDeleteAddress(address.Id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination -->
+                @if (totalPages > 1)
+                {
+                    <nav aria-label="Address pagination">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                            </li>
+                            @for (int i = 1; i <= totalPages; i++)
+                            {
+                                var page = i;
+                                <li class="page-item @(currentPage == page ? "active" : "")">
+                                    <button class="page-link" @onclick="() => ChangePage(page)">@(page)</button>
+                                </li>
+                            }
+                            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == totalPages)">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Address> allAddresses = new();
+    private List<Address> filteredAddresses = new();
+    private List<string> provinces = new();
+    private List<string> districts = new();
+    private string? currentUserId;
+    private bool isLoading = true;
+    
+    // Filter properties
+    private string searchTerm = "";
+    private string selectedProvince = "";
+    public string SelectedProvince
+    {
+        get => selectedProvince;
+        set
+        {
+            selectedProvince = value;
+            FilterAddresses();
+        }
+    }
+    private string selectedDistrict = "";
+    public string SelectedDistrict
+    {
+        get => selectedDistrict;
+        set
+        {
+            selectedDistrict = value;
+            FilterAddresses();
+        }
+    }
+    
+    // Pagination properties
+    private int currentPage = 1;
+    private int pageSize = 12;
+    private int totalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserId();
+        await LoadAddresses();
+    }
+
+    private async Task GetCurrentUserId()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUserId = UserManager.GetUserId(authState.User);
+    }
+
+    private async Task LoadAddresses()
+    {
+        isLoading = true;
+        
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                allAddresses = await DbContext.Addresses
+                    .Where(a => a.UserId == currentUserId && a.LocationType == LocationType.Home)
+                    .OrderByDescending(a => a.Id)
+                    .ToListAsync();
+
+                // Extract unique provinces and cities for filters
+                provinces = allAddresses.Select(a => a.Province).Distinct().OrderBy(p => p).ToList();
+                districts = allAddresses.Select(a => a.District).Distinct().OrderBy(c => c).ToList();
+
+                FilterAddresses();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading addresses: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterAddresses()
+    {
+        var filtered = allAddresses.AsQueryable();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var search = searchTerm.ToLower();
+            filtered = filtered.Where(a => 
+                a.Street.ToLower().Contains(search) ||
+                a.District.ToLower().Contains(search) ||
+                a.Province.ToLower().Contains(search) ||
+                (a.Ward != null && a.Ward.ToLower().Contains(search)) ||
+                (a.Notes != null && a.Notes.ToLower().Contains(search))
+            );
+        }
+
+        // Apply province filter
+        if (!string.IsNullOrWhiteSpace(selectedProvince))
+        {
+            filtered = filtered.Where(a => a.Province == selectedProvince);
+        }
+
+        // Apply city filter
+        if (!string.IsNullOrWhiteSpace(selectedDistrict))
+        {
+            filtered = filtered.Where(a => a.District == selectedDistrict);
+        }
+
+        var allFiltered = filtered.ToList();
+        
+        // Calculate pagination
+        totalPages = (int)Math.Ceiling((double)allFiltered.Count / pageSize);
+        if (currentPage > totalPages && totalPages > 0)
+        {
+            currentPage = totalPages;
+        }
+
+        // Apply pagination
+        filteredAddresses = allFiltered
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = "";
+        selectedProvince = "";
+        selectedDistrict = "";
+        currentPage = 1;
+        FilterAddresses();
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+            FilterAddresses();
+        }
+    }
+
+    private async Task ConfirmDeleteAddress(int addressId)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            "Are you sure you want to delete this address? This action cannot be undone.");
+
+        if (confirmed)
+        {
+            await DeleteAddress(addressId);
+        }
+    }
+
+    private async Task DeleteAddress(int addressId)
+    {
+        try
+        {
+            var address = await DbContext.Addresses.FindAsync(addressId);
+            if (address != null && address.UserId == currentUserId)
+            {
+                DbContext.Addresses.Remove(address);
+                await DbContext.SaveChangesAsync();
+                
+                await LoadAddresses(); // Reload the list
+                
+                await JSRuntime.InvokeVoidAsync("alert", "Address deleted successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error deleting address: {ex.Message}");
+        }
+    }
+}

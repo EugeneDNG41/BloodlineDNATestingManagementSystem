@@ -1,0 +1,339 @@
+@page "/manager"
+@page "/manager/dashboard"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Data.Entities
+@using Data.Enum
+@using Microsoft.AspNetCore.Authorization
+@inject Data.AppDbContext DbContext
+@inject UserManager<User> UserManager
+@attribute [Authorize(Roles = "Manager")]
+
+<PageTitle>Manager Dashboard</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Manager Dashboard</h1>
+        <div class="d-flex gap-2">
+            <span class="badge bg-info">Operations</span>
+            <span class="text-muted">@DateTime.Now.ToString("MMM dd, yyyy HH:mm")</span>
+        </div>
+    </div>
+
+    <!-- Key Operational Metrics -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">@todayAppointments</div>
+                            <div>Today's Appointments</div>
+                            <small class="opacity-75">@upcomingAppointments upcoming</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-calendar-day fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">@collectedSamples</div>
+                            <div>Collected Samples</div>
+                            <small class="opacity-75">@processingSamples processing</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-flask fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">@activeStaff</div>
+                            <div>Active Staff</div>
+                            <small class="opacity-75">@totalStaff total staff</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="h2 mb-0">@completedResults</div>
+                            <div>Results Ready</div>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clipboard-check fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Sample Status Overview -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Sample Processing Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <div class="badge bg-secondary me-2">@collectedSamples</div>
+                                <span class="text-muted">Collected</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <div class="badge bg-info me-2">@receivedSamples</div>
+                                <span class="text-muted">Received</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <div class="badge bg-warning me-2">@processingSamples</div>
+                                <span class="text-muted">Processing</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <div class="badge bg-success me-2">@completedSamples</div>
+                                <span class="text-muted">Completed</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <div class="badge bg-danger me-2">@rejectedSamples</div>
+                                <span class="text-muted">Rejected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Today's Schedule</h5>
+                    <a href="/appointments" class="btn btn-outline-primary btn-sm">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (todaySchedule?.Any() == true)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Patient</th>
+                                        <th>Service</th>
+                                        <th>Status</th>
+                                        @* <th>Staff</th> *@
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var appointment in todaySchedule.Take(8))
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">@appointment.ScheduledAt.ToString("HH:mm")</td>
+                                            <td>
+                                                <div>
+                                                    <div class="fw-semibold">@appointment.User.FullName</div>
+                                                    <small class="text-muted">@appointment.User.PhoneNumber</small>
+                                                </div>
+                                            </td>
+                                            <td>@appointment.Service.ServiceName</td>
+                                            <td>
+                                                <span class="badge @GetStatusBadgeClass(appointment.Status)">
+                                                    @appointment.Status
+                                                </span>
+                                            </td>
+                                            @*<td>
+                                                @if (appointment.AssignedStaffId != null)
+                                                {
+                                                    <span class="text-success">Assigned</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-warning">Unassigned</span>
+                                                }
+                                            </td>*@
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <p class="text-muted">No appointments scheduled for today</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int todayAppointments;
+    private int upcomingAppointments;
+    private int collectedSamples;
+    private int receivedSamples;
+    private int processingSamples;
+    private int completedSamples;
+    private int rejectedSamples;
+    private int activeStaff;
+    private int totalStaff;
+    private int completedResults;
+
+    private List<Appointment> todaySchedule = new();
+    private List<AlertItem> alerts = new();
+    private List<ActivityItem> recentActivities = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+        LoadAlerts();
+        LoadRecentActivities();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        var today = DateTime.Today;
+        var now = DateTime.Now;
+
+        // Load appointment metrics
+        todayAppointments = await DbContext.Appointments
+            .CountAsync(a => a.ScheduledAt.Date == today);
+
+        upcomingAppointments = await DbContext.Appointments
+            .CountAsync(a => a.ScheduledAt > now && a.Status == AppointmentStatus.Scheduled);
+
+        // Load sample metrics using the correct enum values
+        collectedSamples = await DbContext.Samples
+            .CountAsync(s => s.Status == SampleStatus.Collected);
+
+        receivedSamples = await DbContext.Samples
+            .CountAsync(s => s.Status == SampleStatus.Received);
+
+        processingSamples = await DbContext.Samples
+            .CountAsync(s => s.Status == SampleStatus.Processing);
+
+        completedSamples = await DbContext.Samples
+            .CountAsync(s => s.Status == SampleStatus.Completed);
+
+        rejectedSamples = await DbContext.Samples
+            .CountAsync(s => s.Status == SampleStatus.Rejected);
+
+        // Load staff metrics
+        var staffUsers = await UserManager.GetUsersInRoleAsync("Staff");
+        totalStaff = staffUsers.Count;
+        activeStaff = staffUsers.Count(u => !u.LockoutEnd.HasValue || u.LockoutEnd <= DateTime.UtcNow);
+
+        // Load result metrics
+        completedResults = await DbContext.Results
+            .CountAsync(r => !r.IsDeleted);
+
+        // Load today's schedule
+        todaySchedule = await DbContext.Appointments
+            .Include(a => a.User)
+            .Include(a => a.Service)
+            .Where(a => a.ScheduledAt.Date == today)
+            .OrderBy(a => a.ScheduledAt)
+            .ToListAsync();
+    }
+
+    private void LoadAlerts()
+    {
+        alerts = new List<AlertItem>();
+
+        if (collectedSamples > 10)
+        {
+            alerts.Add(new AlertItem { Type = "warning", Icon = "exclamation-triangle", Message = $"{collectedSamples} samples awaiting processing" });
+        }
+
+        if (rejectedSamples > 0)
+        {
+            alerts.Add(new AlertItem { Type = "danger", Icon = "times-circle", Message = $"{rejectedSamples} samples rejected - review required" });
+        }
+
+        if (upcomingAppointments == 0)
+        {
+            alerts.Add(new AlertItem { Type = "info", Icon = "info-circle", Message = "No upcoming appointments scheduled" });
+        }
+
+        if (completedResults > 5)
+        {
+            alerts.Add(new AlertItem { Type = "success", Icon = "check-circle", Message = $"{completedResults} results ready for delivery" });
+        }
+
+        if (processingSamples > 20)
+        {
+            alerts.Add(new AlertItem { Type = "warning", Icon = "clock", Message = $"High processing load: {processingSamples} samples in progress" });
+        }
+    }
+
+    private void LoadRecentActivities()
+    {
+        recentActivities = new List<ActivityItem>
+        {
+            new ActivityItem { Title = "Sample Processing", Description = "5 samples moved to processing", Time = DateTime.Now.AddMinutes(-15) },
+            new ActivityItem { Title = "New Appointment", Description = "Appointment scheduled for tomorrow", Time = DateTime.Now.AddMinutes(-30) },
+            new ActivityItem { Title = "Result Completed", Description = "DNA analysis completed for sample #12345", Time = DateTime.Now.AddHours(-1) },
+            new ActivityItem { Title = "Staff Update", Description = "New staff member added to system", Time = DateTime.Now.AddHours(-2) },
+            new ActivityItem { Title = "Sample Received", Description = "3 new samples received from collection", Time = DateTime.Now.AddHours(-3) }
+        };
+    }
+
+    private string GetStatusBadgeClass(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.Scheduled => "bg-primary",
+            AppointmentStatus.Completed => "bg-success",
+            AppointmentStatus.Cancelled => "bg-danger",
+            AppointmentStatus.NoShow => "bg-warning",
+            _ => "bg-secondary"
+        };
+    }
+
+    private class AlertItem
+    {
+        public string Type { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Message { get; set; } = "";
+    }
+
+    private class ActivityItem
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public DateTime Time { get; set; }
+    }
+}
