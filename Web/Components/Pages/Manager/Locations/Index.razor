@@ -36,7 +36,7 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <select class="form-select" @bind="selectedProvince">
+                            <select class="form-select" @bind="SelectedProvince">
                                 <option value="">All Provinces</option>
                                 @if (availableProvinces?.Any() == true)
                                 {
@@ -48,7 +48,7 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <select class="form-select" @bind="selectedDistrict">
+                            <select class="form-select" @bind="SelectedDistrict">
                                 <option value="">All Districts</option>
                                 @if (availableDistricts?.Any() == true)
                                 {
@@ -155,12 +155,31 @@
     private List<Address>? allLocations;
     private List<Address>? filteredLocations;
     private List<string>? availableProvinces;
+
     private List<string>? availableDistricts;
     private Address currentLocation = new();
     
     private string searchTerm = string.Empty;
     private string selectedType = string.Empty;
     private string selectedProvince = string.Empty;
+    public string SelectedProvince
+    {
+        get => selectedProvince;
+        set
+        {
+            selectedProvince = value;
+            FilterLocations();
+        }
+    }
+    public string SelectedDistrict
+    {
+        get => selectedDistrict;
+        set
+        {
+            selectedDistrict = value;
+            FilterLocations();
+        }
+    }
     private string selectedDistrict = string.Empty;
 
     protected override async Task OnInitializedAsync()

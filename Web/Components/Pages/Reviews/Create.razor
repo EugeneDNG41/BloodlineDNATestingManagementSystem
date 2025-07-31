@@ -33,7 +33,7 @@
                     {
                         <div class="alert alert-success" role="alert">
                             <i class="fas fa-check-circle me-2"></i>
-                            Thank you for your review! Redirecting to services page...
+                            Thank you for your review!
                         </div>
                     }
 
@@ -261,12 +261,6 @@
 
             await ReviewService.CreateReviewAsync(review);
             showSuccessMessage = true;
-
-            // Redirect after a short delay to show success message
-            _ = Task.Delay(2000).ContinueWith(async _ =>
-            {
-                await InvokeAsync(() => Navigation.NavigateTo("/services"));
-            });
         }
         catch (Exception ex)
         {

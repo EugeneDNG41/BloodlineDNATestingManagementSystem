@@ -204,6 +204,12 @@
 
         try
         {
+            if (addressModel.Province == "Tỉnh Thành" || addressModel.District == "Quận Huyện" || addressModel.Ward == "Phường Xã")
+            {
+                // Handle as invalid input
+                message = "Please select a province/city, district, and/or ward";
+                return;
+            }
             // Validate required fields
             if (string.IsNullOrWhiteSpace(addressModel.Street))
             {

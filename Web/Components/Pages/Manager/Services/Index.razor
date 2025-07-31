@@ -63,12 +63,14 @@
                                     </td>
                                     <td>@service.Duration</td>
                                     <td>
-                                        <span class="badge bg-info">@service.Appointments?.Count ?? 0</span>
+                                        <span class="badge bg-info">@(service.Appointments?.Count ?? 0)</span>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <span class="badge bg-warning me-1">@service.Reviews?.Count ?? 0</span>
-                                            <small class="text-muted">4.8★</small>
+                                            <span class="badge bg-warning me-1">@(service.Reviews?.Count ?? 0)</span>
+                                            <small class="text-muted">
+                                                @(service.Reviews != null && service.Reviews.Any() ? service.Reviews.Average(r => r.Rating) : 0)★
+                                            </small>
                                         </div>
                                     </td>
                                     <td>
