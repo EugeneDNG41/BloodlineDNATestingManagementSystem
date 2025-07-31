@@ -1,0 +1,260 @@
+@page "/admin/users/create"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using Data.Entities
+@using Microsoft.AspNetCore.Authorization
+@inject UserManager<User> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+
+<PageTitle>Create New User</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Create New User</h1>
+        <a href="/admin/users" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Users
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">User Information</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            @errorMessage
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success">
+                            @successMessage
+                        </div>
+                    }
+
+                    <EditForm Model="Input" OnValidSubmit="CreateUser" FormName="create-user">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger mb-3" />
+
+                        <div class="row g-3">
+                            <div class="form-floating mb-3">
+                                <InputText @bind-Value="Input.FullName" class="form-control" placeholder="First Name" />
+                                <label>First Name</label>
+                                <ValidationMessage For="() => Input.FullName" class="text-danger" />
+                            </div>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <InputText @bind-Value="Input.Email" class="form-control" placeholder="Email" />
+                            <label>Email</label>
+                            <ValidationMessage For="() => Input.Email" class="text-danger" />
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <InputText @bind-Value="Input.PhoneNumber" class="form-control" placeholder="Phone Number" />
+                            <label>Phone Number (Optional)</label>
+                            <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3">
+                                    <InputDate @bind-Value="Input.DateOfBirth" class="form-control" />
+                                    <label>Date of Birth</label>
+                                    <ValidationMessage For="() => Input.DateOfBirth" class="text-danger" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3">
+                                    <InputSelect @bind-Value="Input.Gender" class="form-control">
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                        <option value="PreferNotToSay">Prefer not to say</option>
+                                    </InputSelect>
+                                    <label>Gender</label>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="form-floating mb-3">
+                            <InputText type="password" @bind-Value="Input.Password" class="form-control" placeholder="Password" />
+                            <label>Password</label>
+                            <ValidationMessage For="() => Input.Password" class="text-danger" />
+                            <div class="form-text">Password must be at least 6 characters long.</div>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" placeholder="Confirm Password" />
+                            <label>Confirm Password</label>
+                            <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">User Role</label>
+                            <div class="row">
+                                @foreach (var role in availableRoles)
+                                {
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="role" value="@role.Name" 
+                                                   @onchange="@((e) => Input.Role = e.Value?.ToString())" 
+                                                   checked="@(Input.Role == role.Name)" />
+                                            <label class="form-check-label">
+                                                @role.Name
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            @if (string.IsNullOrEmpty(Input.Role))
+                            {
+                                <div class="text-danger">Please select a role for the user.</div>
+                            }
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <InputCheckbox @bind-Value="Input.EmailConfirmed" class="form-check-input" />
+                            <label class="form-check-label">
+                                Email Confirmed (Skip email verification)
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="/admin/users" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary" disabled="@isCreating">
+                                @if (isCreating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="fas fa-plus me-2"></i>Create User
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<IdentityRole> availableRoles = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isCreating = false;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        availableRoles = RoleManager.Roles.ToList();
+    }
+
+    private async Task CreateUser()
+    {
+        isCreating = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            if (string.IsNullOrEmpty(Input.Role))
+            {
+                errorMessage = "Please select a role for the user.";
+                return;
+            }
+
+            var user = new User
+            {
+                UserName = Input.Email,
+                Email = Input.Email,
+                FullName = Input.FullName,
+                PhoneNumber = Input.PhoneNumber,
+                DateOfBirth = Input.DateOfBirth,
+                Gender = Input.Gender,
+                EmailConfirmed = Input.EmailConfirmed,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var result = await UserManager.CreateAsync(user, Input.Password);
+
+            if (result.Succeeded)
+            {
+                // Add user to selected role
+                await UserManager.AddToRoleAsync(user, Input.Role);
+
+                successMessage = $"User '{user.FullName}' has been created successfully!";
+                
+                // Reset form
+                Input = new InputModel();
+                
+                // Redirect after a short delay
+                await Task.Delay(2000);
+                NavigationManager.NavigateTo("/admin/users");
+            }
+            else
+            {
+                errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [Display(Name = "Full Name")]
+        public string FullName { get; set; } = "";
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Phone]
+        [Display(Name = "Phone Number")]
+        public string? PhoneNumber { get; set; }
+
+        [Required]
+        [Display(Name = "Date of Birth")]
+        public DateTime DateOfBirth { get; set; } = DateTime.Today.AddYears(-18);
+
+        [Display(Name = "Gender")]
+        public string? Gender { get; set; }
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Role")]
+        public string Role { get; set; } = "";
+
+        [Display(Name = "Email Confirmed")]
+        public bool EmailConfirmed { get; set; } = false;
+    }
+}

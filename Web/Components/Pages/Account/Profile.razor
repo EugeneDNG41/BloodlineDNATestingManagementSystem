@@ -128,9 +128,20 @@
                         <DataAnnotationsValidator />
 
                         <div class="row mb-3">
-                            <label>Full Name</label>
-                            <InputText @bind-Value="ProfileInput.FullName" class="form-control" placeholder="Full name" />
-                            <ValidationMessage For="() => ProfileInput.FullName" />                          
+                            <div class="col-md-6">
+                                <label>Full Name</label>
+                                <InputText @bind-Value="ProfileInput.FullName" class="form-control" placeholder="Full name" />
+                                <ValidationMessage For="() => ProfileInput.FullName" />    
+                            </div>
+                            <div class="col-md-6">
+                                <label>Gender</label>
+                                <InputSelect @bind-Value="ProfileInput.Gender" class="form-control">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                    <option value="PreferNotToSay">Prefer not to say</option>
+                                </InputSelect>
+                            </div>
                         </div>
 
                         <div class="row mb-3">
@@ -202,11 +213,7 @@
                                     <div>
                                         <h6><i class="fas fa-home me-2"></i>Home Address</h6>
                                         <p class="mb-1">@address.Street</p>
-                                        @if (!string.IsNullOrEmpty(address.Ward))
-                                        {
-                                            <p class="mb-1">@address.Ward, @address.District</p>
-                                        }
-                                        <p class="mb-0 text-muted">@address.City, @address.Province @address.ZipCode</p>
+                                        <p class="mb-0 text-muted">@address.Ward, @address.District, @address.Province, @address.ZipCode</p>
                                     </div>
                                 </div>
                             </div>
@@ -342,6 +349,7 @@
             ProfileInput.FullName = currentUser.FullName;
             ProfileInput.PhoneNumber = currentUser.PhoneNumber ?? "";
             ProfileInput.DateOfBirth = currentUser.DateOfBirth;
+            ProfileInput.Gender = currentUser.Gender ?? "";
         }
     }
     private void ResetForm()
@@ -368,6 +376,9 @@
         [Required]
         [Display(Name = "Date of Birth")]
         public DateTime DateOfBirth { get; set; }
+
+        [Display(Name = "Gender")]
+        public string Gender { get; set; }
     }
 
     private sealed class PasswordInputModel

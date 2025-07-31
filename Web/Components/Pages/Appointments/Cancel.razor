@@ -1,0 +1,125 @@
+﻿@page "/appointments/{appointmentId:int}/cancel"
+@inject NavigationManager NavigationManager
+@inject IAppointmentService AppointmentService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using global::Services.Interfaces
+@rendermode InteractiveServer
+
+<h3 class="mt-4 text-danger">Cancel Appointment</h3>
+<p class="text-muted">Please provide a reason for cancellation. This helps us improve our service.</p>
+
+@if (isSuccess)
+{
+    <div class="alert alert-success">Your appointment was cancelled successfully.</div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<EditForm Model="cancelModel" OnValidSubmit="HandleCancel" FormName="CancelAppointment">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Reason for Cancellation <span class="text-danger">*</span></label>
+        <InputTextArea class="form-control" @bind-Value="cancelModel.Reason" rows="4" placeholder="E.g., I can no longer attend..." />
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-danger" type="submit" disabled="@isSubmitting">
+            @if (isSubmitting)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+             
+            }
+            else
+            {
+                <span>Confirm Cancel</span>
+            }
+        </button>
+        <button class="btn btn-secondary" @onclick="BackToIndex" type="button">Back</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public int appointmentId { get; set; }
+
+    private CancelModel cancelModel = new();
+    private bool isSuccess = false;
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+
+
+    private async Task HandleCancel()
+    {
+        isSubmitting = true;
+        errorMessage = string.Empty;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity == null || !user.Identity.IsAuthenticated)
+        {
+            errorMessage = "You must be logged in to cancel an appointment.";
+            isSubmitting = false;
+            return;
+        }
+
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            errorMessage = "User ID not found.";
+            isSubmitting = false;
+            return;
+        }
+
+        var success = await AppointmentService.CancelAppointmentAsync(appointmentId, userId, cancelModel.Reason);
+        if (success)
+        {
+            isSuccess = true;
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/appointments");
+        }
+        else
+        {
+            errorMessage = "Unable to cancel the appointment.";
+        }
+
+        isSubmitting = false;
+    }
+
+
+    // private async Task HandleCancel()
+    // {
+    //     isSubmitting = true;
+    //     errorMessage = string.Empty;
+
+    //     var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    //     var userId = authState.User?.FindFirst("sub")?.Value ?? "";
+
+    //     var success = await AppointmentService.CancelAppointmentAsync(appointmentId, userId, cancelModel.Reason);
+    //     if (success)
+    //     {
+    //         isSuccess = true;
+    //         await Task.Delay(1000);
+    //         NavigationManager.NavigateTo("/appointments");
+    //     }
+    //     else
+    //     {
+    //         errorMessage = "Unable to cancel the appointment.";
+    //     }
+
+    //     isSubmitting = false;
+    // }
+
+    private void BackToIndex() => NavigationManager.NavigateTo("/appointments");
+
+    public class CancelModel
+    {
+        [Required(ErrorMessage = "Reason is required")]
+        public string Reason { get; set; } = string.Empty;
+    }
+}

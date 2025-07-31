@@ -28,29 +28,51 @@ namespace Web
             // Create admin user if it doesn't exist
             string adminEmail = "admin@admin.com";
             string adminPassword = "Admin@123";
+            await CreateUserAsync(userManager, adminEmail, adminPassword, "Admin");
+            string managerEmail = "manager@manager.com";
+            string managerPassword = "Manager@123";
+            await CreateUserAsync(userManager, managerEmail, managerPassword, "Manager");
+            string staffEmail = "staff@staff.com";
+            string staffPassword = "Staff@123";
+            await CreateUserAsync(userManager, staffEmail, staffPassword, "Staff");
 
-            var adminUser = await userManager.FindByEmailAsync(adminEmail);
-            if (adminUser == null)
+            return service;
+        }
+
+        private static async Task CreateUserAsync(UserManager<User> userManager, string email, string password, string role)
+        {
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null)
             {
-                adminUser = new User
+                user = new User
                 {
-                    FullName = "Admin",
-                    UserName = adminEmail,
-                    Email = adminEmail,
+                    FullName = email.Split('@')[0],
+                    UserName = email,
+                    Email = email,
                     EmailConfirmed = true
                 };
-
-                var result = await userManager.CreateAsync(adminUser, adminPassword);
+                var result = await userManager.CreateAsync(user, password);
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                    await userManager.AddToRoleAsync(user, role);
                 }
                 else
                 {
-                    throw new Exception("Failed to create admin user: " + string.Join(", ", result.Errors.Select(e => e.Description)));
-                }            
+                    throw new Exception($"Failed to create {role} user: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
             }
-            return service;
+            else
+            {
+                // If user already exists, ensure they are in the correct role
+                if (!await userManager.IsInRoleAsync(user, role))
+                {
+                    var result = await userManager.AddToRoleAsync(user, role);
+                    if (!result.Succeeded)
+                    {
+                        throw new Exception($"Failed to add {role} role to existing user: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+                    }
+                }
+            }
         }
     }
 }

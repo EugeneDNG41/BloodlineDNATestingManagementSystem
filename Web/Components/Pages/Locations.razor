@@ -23,7 +23,7 @@
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Search by Location</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" @bind="searchTerm" @onkeypress="HandleKeyPress" placeholder="City, Province, District...">
+                                <input type="text" class="form-control" @bind="searchTerm" @onkeypress="HandleKeyPress" placeholder="Province, District...">
                                 <button class="btn btn-outline-secondary" @onclick="SearchLocations">
                                     <i class="fas fa-search"></i>
                                 </button>
@@ -51,14 +51,14 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label class="form-label">City</label>
-                            <select class="form-select" @bind="selectedCity">
-                                <option value="">All Cities</option>
-                                @if (availableCities?.Any() == true)
+                            <label class="form-label">District</label>
+                            <select class="form-select" @bind="selectedDistrict">
+                                <option value="">All Districts</option>
+                                @if (availableDistricts?.Any() == true)
                                 {
-                                    @foreach (var city in availableCities)
+                                    @foreach (var district in availableDistricts)
                                     {
-                                        <option value="@city">@city</option>
+                                        <option value="@district">@district</option>
                                     }
                                 }
                             </select>
@@ -100,7 +100,7 @@
                                         <h6><i class="fas fa-map-marker-alt me-2"></i>Address</h6>
                                         <p class="mb-1">@location.Street</p>
                                         <p class="mb-1">@location.Ward, @location.District</p>
-                                        <p class="mb-0">@location.City, @location.Province @location.ZipCode</p>
+                                        <p class="mb-0">@location.Province @location.ZipCode</p>
                                     </div>
 
                                     @if (!string.IsNullOrEmpty(location.OpeningHours))
@@ -150,12 +150,12 @@
     private List<Address>? allLocations;
     private List<Address>? filteredLocations;
     private List<string>? availableProvinces;
-    private List<string>? availableCities;
+    private List<string>? availableDistricts;
     
     private string searchTerm = string.Empty;
     private string selectedType = string.Empty;
     private string selectedProvince = string.Empty;
-    private string selectedCity = string.Empty;
+    private string selectedDistrict = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -171,7 +171,6 @@
             .Where(a => a.LocationType == LocationType.Lab || a.LocationType == LocationType.Clinic)
             .Where(a => !a.IsDeleted)
             .OrderBy(a => a.Province)
-            .ThenBy(a => a.City)
             .ThenBy(a => a.District)
             .ToListAsync();
     }
@@ -186,8 +185,8 @@
                 .OrderBy(p => p)
                 .ToList();
 
-            availableCities = allLocations
-                .Select(l => l.City)
+            availableDistricts = allLocations
+                .Select(l => l.District)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
@@ -201,9 +200,8 @@
         filteredLocations = allLocations.Where(location =>
         {
             var matchesSearch = string.IsNullOrEmpty(searchTerm) ||
-                location.City.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                location.Province.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 location.District.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                location.Province.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 location.Ward.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
 
             var matchesType = string.IsNullOrEmpty(selectedType) ||
@@ -212,8 +210,8 @@
             var matchesProvince = string.IsNullOrEmpty(selectedProvince) ||
                 location.Province.Equals(selectedProvince, StringComparison.OrdinalIgnoreCase);
 
-            var matchesCity = string.IsNullOrEmpty(selectedCity) ||
-                location.City.Equals(selectedCity, StringComparison.OrdinalIgnoreCase);
+            var matchesCity = string.IsNullOrEmpty(selectedDistrict) ||
+                location.District.Equals(selectedDistrict, StringComparison.OrdinalIgnoreCase);
 
             return matchesSearch && matchesType && matchesProvince && matchesCity;
         }).ToList();
@@ -238,12 +236,12 @@
     {
         // Could navigate to a detailed view or show a modal with more information
         // For now, we'll just show an alert with the details
-        JSRuntime.InvokeVoidAsync("alert", $"Location Details:\n\nAddress: {location.Street}, {location.Ward}, {location.District}\nCity: {location.City}, {location.Province}\nZip: {location.ZipCode}\n\nHours: {location.OpeningHours ?? "Not specified"}\nNotes: {location.Notes ?? "None"}");
+        JSRuntime.InvokeVoidAsync("alert", $"Location Details:\n\nAddress: {location.Street}, {location.Ward}, {location.District}, {location.Province}\nZip: {location.ZipCode}\n\nHours: {location.OpeningHours ?? "Not specified"}\nNotes: {location.Notes ?? "None"}");
     }
 
     private void GetDirections(Address location)
     {
-        var address = $"{location.Street}, {location.Ward}, {location.District}, {location.City}, {location.Province}";
+        var address = $"{location.Street}, {location.Ward}, {location.District}, {location.Province}";
         var encodedAddress = Uri.EscapeDataString(address);
         var mapsUrl = $"https://www.google.com/maps/search/?api=1&query={encodedAddress}";
         

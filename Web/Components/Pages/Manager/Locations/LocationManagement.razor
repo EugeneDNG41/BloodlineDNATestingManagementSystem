@@ -15,9 +15,9 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="fas fa-building me-2"></i>Location Management</h2>
-                <button class="btn btn-primary" @onclick="ShowAddLocationModal">
-                    <i class="fas fa-plus me-2"></i>Add Location
-                </button>
+                <a href="/manager/locations/create" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add New User
+                </a>
             </div>
 
             <!-- Search and Filter -->
@@ -47,13 +47,13 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <select class="form-select" @bind="selectedCity">
-                                <option value="">All Cities</option>
-                                @if (availableCities?.Any() == true)
+                            <select class="form-select" @bind="selectedDistrict">
+                                <option value="">All Districts</option>
+                                @if (availableDistricts?.Any() == true)
                                 {
-                                    @foreach (var city in availableCities)
+                                    @foreach (var district in availableDistricts)
                                     {
-                                        <option value="@city">@city</option>
+                                        <option value="@district">@district</option>
                                     }
                                 }
                             </select>
@@ -102,7 +102,6 @@
                                             </td>
                                             <td>
                                                 <div>
-                                                    <div><strong>City:</strong> @location.City</div>
                                                     <div><strong>Province:</strong> @location.Province</div>
                                                     <div><strong>Zip:</strong> @location.ZipCode</div>
                                                 </div>
@@ -122,12 +121,9 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => EditLocation(location)">
+                                                    <a href="/manager/locations/edit/@currentLocation.Id" class="btn btn-outline-secondary" title="Edit">
                                                         <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-info" @onclick="() => ViewAppointments(location.Id)">
-                                                        <i class="fas fa-calendar"></i>
-                                                    </button>
+                                                    </a>
                                                     <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(location.Id)">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
@@ -153,98 +149,18 @@
     </div>
 </div>
 
-<!-- Add/Edit Location Modal -->
-<div class="modal fade" id="locationModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">@(isEditing ? "Edit Location" : "Add Location")</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <EditForm Model="currentLocation" OnValidSubmit="SaveLocation">
-                <DataAnnotationsValidator />
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Location Type *</label>
-                        <InputSelect @bind-Value="currentLocation.LocationType" class="form-select">
-                            <option value="@LocationType.Lab">Lab</option>
-                            <option value="@LocationType.Clinic">Clinic</option>
-                        </InputSelect>
-                        <ValidationMessage For="@(() => currentLocation.LocationType)" />
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Street Address *</label>
-                        <InputText @bind-Value="currentLocation.Street" class="form-control" />
-                        <ValidationMessage For="@(() => currentLocation.Street)" />
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Ward *</label>
-                            <InputText @bind-Value="currentLocation.Ward" class="form-control" />
-                            <ValidationMessage For="@(() => currentLocation.Ward)" />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">District *</label>
-                            <InputText @bind-Value="currentLocation.District" class="form-control" />
-                            <ValidationMessage For="@(() => currentLocation.District)" />
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">City *</label>
-                            <InputText @bind-Value="currentLocation.City" class="form-control" />
-                            <ValidationMessage For="@(() => currentLocation.City)" />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Province *</label>
-                            <InputText @bind-Value="currentLocation.Province" class="form-control" />
-                            <ValidationMessage For="@(() => currentLocation.Province)" />
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Zip Code *</label>
-                        <InputText @bind-Value="currentLocation.ZipCode" class="form-control" />
-                        <ValidationMessage For="@(() => currentLocation.ZipCode)" />
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Opening Hours</label>
-                        <InputText @bind-Value="currentLocation.OpeningHours" class="form-control" placeholder="e.g., Mon-Fri: 8AM-6PM, Sat: 9AM-3PM" />
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <InputTextArea @bind-Value="currentLocation.Notes" class="form-control" rows="3" 
-                                       placeholder="Additional information, special instructions, etc." />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        @(isEditing ? "Update Location" : "Add Location")
-                    </button>
-                </div>
-            </EditForm>
-        </div>
-    </div>
-</div>
 
 @code {
     private List<Address>? allLocations;
     private List<Address>? filteredLocations;
     private List<string>? availableProvinces;
-    private List<string>? availableCities;
+    private List<string>? availableDistricts;
     private Address currentLocation = new();
-    private bool isEditing = false;
     
     private string searchTerm = string.Empty;
     private string selectedType = string.Empty;
     private string selectedProvince = string.Empty;
-    private string selectedCity = string.Empty;
+    private string selectedDistrict = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -260,7 +176,6 @@
             .Where(a => a.LocationType == LocationType.Lab || a.LocationType == LocationType.Clinic)
             .OrderBy(a => a.LocationType)
             .ThenBy(a => a.Province)
-            .ThenBy(a => a.City)
             .ToListAsync();
     }
 
@@ -273,12 +188,11 @@
                 .Distinct()
                 .OrderBy(p => p)
                 .ToList();
-
-            availableCities = allLocations
-                .Select(l => l.City)
-                .Distinct()
-                .OrderBy(c => c)
-                .ToList();
+            availableDistricts = allLocations
+            .Select(l => l.District)
+            .Distinct()
+            .OrderBy(p => p)
+            .ToList();
         }
     }
 
@@ -292,7 +206,6 @@
                 location.Street.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 location.Ward.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 location.District.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                location.City.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 location.Province.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
 
             var matchesType = string.IsNullOrEmpty(selectedType) ||
@@ -301,10 +214,7 @@
             var matchesProvince = string.IsNullOrEmpty(selectedProvince) ||
                 location.Province.Equals(selectedProvince, StringComparison.OrdinalIgnoreCase);
 
-            var matchesCity = string.IsNullOrEmpty(selectedCity) ||
-                location.City.Equals(selectedCity, StringComparison.OrdinalIgnoreCase);
-
-            return matchesSearch && matchesType && matchesProvince && matchesCity;
+            return matchesSearch && matchesType && matchesProvince;
         }).ToList();
 
         StateHasChanged();
@@ -315,73 +225,6 @@
         if (e.Key == "Enter")
         {
             await FilterLocations();
-        }
-    }
-
-    private async Task ShowAddLocationModal()
-    {
-        currentLocation = new Address 
-        { 
-            LocationType = LocationType.Lab
-        };
-        isEditing = false;
-        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('addressModal')).show()");
-    }
-
-    private async Task EditLocation(Address location)
-    {
-        currentLocation = new Address
-        {
-            Id = location.Id,
-            Street = location.Street,
-            Ward = location.Ward,
-            District = location.District,
-            City = location.City,
-            Province = location.Province,
-            ZipCode = location.ZipCode,
-            LocationType = location.LocationType,
-            OpeningHours = location.OpeningHours,
-            Notes = location.Notes,
-            UserId = location.UserId
-        };
-        isEditing = true;
-        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('addressModal')).show()");
-    }
-
-    private async Task SaveLocation()
-    {
-        try
-        {
-            if (isEditing)
-            {
-                var existingLocation = await DbContext.Addresses.FindAsync(currentLocation.Id);
-                if (existingLocation != null)
-                {
-                    existingLocation.Street = currentLocation.Street;
-                    existingLocation.Ward = currentLocation.Ward;
-                    existingLocation.District = currentLocation.District;
-                    existingLocation.City = currentLocation.City;
-                    existingLocation.Province = currentLocation.Province;
-                    existingLocation.ZipCode = currentLocation.ZipCode;
-                    existingLocation.LocationType = currentLocation.LocationType;
-                    existingLocation.OpeningHours = currentLocation.OpeningHours;
-                    existingLocation.Notes = currentLocation.Notes;
-                }
-            }
-            else
-            {
-                DbContext.Addresses.Add(currentLocation);
-            }
-
-            await DbContext.SaveChangesAsync();
-            await LoadLocations();
-            LoadFilterOptions();
-            await FilterLocations();
-            await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('addressModal')).hide()");
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error saving location: {ex.Message}");
         }
     }
 
@@ -419,12 +262,6 @@
         }
     }
 
-    private void ViewAppointments(int locationId)
-    {
-        // Navigate to appointments filtered by location
-        // NavigationManager.NavigateTo($"/manager/appointments?locationId={locationId}");
-        JSRuntime.InvokeVoidAsync("alert", "Navigate to appointments for this location");
-    }
 
     private string GetLocationIcon(LocationType locationType)
     {
