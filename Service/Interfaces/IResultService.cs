@@ -13,7 +13,11 @@ namespace Services.Interfaces
         Task<IEnumerable<Result>> GetResultsByUserIdAsync(string userId);
         Task<Result?> GetResultDetailsAsync(int resultId, string userId);
 
-        // === For Staff/Admin (Thêm mới) ===
+        // === For Staff ===
+        Task<IEnumerable<Result>> GetAllResultsAsync();
+        Task<Result?> GetResultByIdAsync(int resultId);
         Task<Result> CreateResultAsync(Result newResult, List<int> sampleIds);
+        Task UpdateResultAsync(Result resultToUpdate, List<int> sampleIds);
+        Task DeleteResultAsync(int resultId);
     }
 }
