@@ -63,7 +63,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Location Name</label>
-                                        <InputText @bind-Value="locationName" class="form-control" placeholder="Enter location name (optional)" />
+                                        <InputText @bind-Value="locationName" class="form-control" placeholder="Enter location name" />
                                     </div>
                                 </div>
 
@@ -81,7 +81,7 @@
                                 </div>
 
                                 <div class="css_select_div mb-3">
-                                    <label class="form-label d-block">Location *</label>
+                                    <label class="form-label d-block">Location</label>
                                     <select class="css_select" id="tinh" name="tinh" title="Chọn Tỉnh Thành" @onchange="OnProvinceChanged">
                                         <option value="0">Tỉnh Thành</option>
                                     </select>
@@ -139,6 +139,14 @@
     {
         addressModel.LocationType = LocationType.Lab;
         addressModel.UserId = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("initializeLocationAPI");
+        }
     }
 
     private async Task OnProvinceChanged(ChangeEventArgs e)
@@ -242,7 +250,7 @@
     window.initializeLocationAPI = () => {
         $(document).ready(function() {
             //Lấy tỉnh thành
-            $.getJSON('https://esgoo.net/api-tinhthanh/1/0.htm',function(data_tinh){	                   
+            $.getJSON('https://esgoo.net/api-tinhthanh/1/0.htm',function(data_tinh){
                 if(data_tinh.error==0){
                     $.each(data_tinh.data, function (key_tinh,val_tinh) {
                         $("#tinh").append('<option value="'+val_tinh.id+'">'+val_tinh.full_name+'</option>');
@@ -250,28 +258,28 @@
                     $("#tinh").change(function(e){
                         var idtinh=$(this).val();
                         //Lấy quận huyện
-                        $.getJSON('https://esgoo.net/api-tinhthanh/2/'+idtinh+'.htm',function(data_quan){	                               
+                        $.getJSON('https://esgoo.net/api-tinhthanh/2/'+idtinh+'.htm',function(data_quan){
                             if(data_quan.error==0){
-                                $("#quan").html('<option value="0">Quận Huyện</option>');                             
-                                $("#phuong").html('<option value="0">Phường Xã</option>');                              
+                                $("#quan").html('<option value="0">Quận Huyện</option>');
+                                $("#phuong").html('<option value="0">Phường Xã</option>');
                                 $.each(data_quan.data, function (key_quan,val_quan) {
                                     $("#quan").append('<option value="'+val_quan.id+'">'+val_quan.full_name+'</option>');
                                 });
-                                //Lấy phường xã                             
+                                //Lấy phường xã
                                 $("#quan").change(function(e){
                                     var idquan=$(this).val();
-                                    $.getJSON('https://esgoo.net/api-tinhthanh/3/'+idquan+'.htm',function(data_phuong){	                                           
+                                    $.getJSON('https://esgoo.net/api-tinhthanh/3/'+idquan+'.htm',function(data_phuong){
                                         if(data_phuong.error==0){
-                                            $("#phuong").html('<option value="0">Phường Xã</option>');                                          
+                                            $("#phuong").html('<option value="0">Phường Xã</option>');
                                             $.each(data_phuong.data, function (key_phuong,val_phuong) {
                                                 $("#phuong").append('<option value="'+val_phuong.id+'">'+val_phuong.full_name+'</option>');
                                             });
                                         }
                                     });
-                                });                                                     
+                                });
                             }
                         });
-                    });                                
+                    });
                 }
             });
         });

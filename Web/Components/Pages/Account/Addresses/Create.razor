@@ -120,6 +120,7 @@
     protected override async Task OnInitializedAsync()
     {
         await GetCurrentUserId();
+        await JSRuntime.InvokeVoidAsync("initializeLocationAPI");
         addressModel.LocationType = LocationType.Home;
         addressModel.UserId = currentUserId ?? "";
     }
