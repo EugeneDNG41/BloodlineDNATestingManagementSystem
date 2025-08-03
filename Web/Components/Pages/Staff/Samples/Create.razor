@@ -32,15 +32,17 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Donor (Customer)</label>
-                            <InputSelect @bind-Value="InputModel.DonorIdString" class="form-select" @bind-Value:event="onchange">
-                                <option value="">Select a customer...</option>
+                            <InputSelect @bind-Value="InputModel.DonorIdString" class="form-select">
+                                <option disabled selected value="">-- Select a customer --</option>
                                 @foreach (var user in customerList)
                                 {
-                                    <option value="@user.Id.ToString()">@user.FullName (@user.Email)</option>
+                                    <option value="@user.Id">@user.FullName (@user.Email)</option>
                                 }
                             </InputSelect>
                             <ValidationMessage For="@(() => InputModel.DonorIdString)" class="text-danger" />
+
                         </div>
+
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Collector (Staff)</label>
                             <InputSelect @bind-Value="InputModel.CollectorIdString" class="form-select" @bind-Value:event="onchange">
@@ -64,6 +66,7 @@
                                 }
                             </InputSelect>
                         </div>
+
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Collection Method</label>
                             <InputSelect @bind-Value="InputModel.CollectionMethod" class="form-select">
@@ -87,6 +90,13 @@
 
                     <button type="submit" class="btn btn-primary">Create Sample</button>
                     <a href="/staff/samples" class="btn btn-secondary">Cancel</a>
+
+                    <hr />
+                    <div class="alert alert-light border mt-3">
+                        <strong>DEBUG:</strong><br />
+                        DonorIdString = <code>@InputModel.DonorIdString</code><br />
+                        CollectorIdString = <code>@InputModel.CollectorIdString</code>
+                    </div>
                 </EditForm>
             }
         </div>
@@ -95,7 +105,6 @@
 
 @code {
     private SampleInputModel InputModel { get; set; } = new();
-
     private List<User> customerList = new();
     private List<User> staffList = new();
     private bool isLoading = true;
@@ -106,7 +115,7 @@
         customerList = customers.ToList();
 
         var staffAndManager = (await UserManager.GetUsersInRoleAsync("Staff")).ToList();
-        staffAndManager.AddRange((await UserManager.GetUsersInRoleAsync("Manager")));
+        staffAndManager.AddRange(await UserManager.GetUsersInRoleAsync("Manager"));
         staffList = staffAndManager.Distinct().ToList();
 
         isLoading = false;
